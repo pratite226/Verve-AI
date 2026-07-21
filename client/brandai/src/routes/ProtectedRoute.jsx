@@ -1,0 +1,1 @@
+﻿import { Navigate } from react-router-dom;`n`nexport default function ProtectedRoute({ children, isAuthenticated }) {`n  if (!isAuthenticated) {`n    return <Navigate to=/login replace />;`n  }`n`n  return children;`n}`n

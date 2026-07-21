@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+:root {
+  --color-paper: #F4EFE6;
+  --color-ink: #1F1B16;
+  --color-cobalt: #8B6F47;
+  --color-gold: #C99A2E;
+  --color-line: #DDD5C7;
+  --color-muted: #8A8578;
+
+  --font-display: "Fraunces", serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+}
+
+@layer components {
+  .byline {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--color-muted);
+  }
+  .byline::before {
+    content: "";
+    height: 1px;
+    width: 2rem;
+    background: var(--color-line);
+  }
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-ink);
+    background: var(--color-ink);
+    color: var(--color-paper);
+    padding: 0.75rem 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    transition: background-color 0.2s, border-color 0.2s;
+  }
+  .btn-primary:hover {
+    background: var(--color-cobalt);
+    border-color: var(--color-cobalt);
+  }
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-ink);
+    background: transparent;
+    color: var(--color-ink);
+    padding: 0.75rem 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    transition: background-color 0.2s, color 0.2s;
+  }
+  .btn-secondary:hover {
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+  .field-label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--color-muted);
+  }
+  .field-input {
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid var(--color-line);
+    background: transparent;
+    padding: 0.5rem 0;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    color: var(--color-ink);
+    outline: none;
+  }
+  .field-input:focus {
+    border-color: var(--color-cobalt);
+  }
+}
