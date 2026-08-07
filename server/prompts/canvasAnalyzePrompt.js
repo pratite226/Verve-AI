@@ -7,6 +7,7 @@ what content they could make from it.
 Brand context:
 - Positioning: ${brief.positioning}
 - Content pillars: ${brief.contentPillars.join(", ")}
+${brief.thingsToAvoid ? `- Never suggest ideas involving: ${brief.thingsToAvoid}` : ""}
 
 Notes on the board:
 ${textNotes.map((n, i) => `${i + 1}. ${n}`).join("\n")}

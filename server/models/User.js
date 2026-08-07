@@ -30,6 +30,18 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    ageRange: {
+      type: String,
+      default: "",
+    },
+    gender: {
+      type: String,
+      default: "",
+    },
+    interests: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true } // auto-adds createdAt + updatedAt
 );

@@ -2,6 +2,13 @@ const BrandBrief = require("../models/BrandBrief");
 const User = require("../models/User");
 const { generateBrandBrief } = require("../services/aiService");
 
+// Accepts either an array or a comma-separated string from the client
+const toArray = (value) => {
+  if (Array.isArray(value)) return value.map((v) => v.trim()).filter(Boolean);
+  if (typeof value === "string") return value.split(",").map((v) => v.trim()).filter(Boolean);
+  return [];
+};
+
 // @route POST /api/brand/generate
 const generateBrand = async (req, res) => {
   try {
@@ -9,9 +16,20 @@ const generateBrand = async (req, res) => {
 
     const aiResult = await generateBrandBrief(answers);
 
+    const structuredAnswers = {
+      preferredPlatforms: toArray(answers.preferredPlatforms),
+      postingFrequency: answers.postingFrequency || "",
+      topicsLoved: toArray(answers.topicsLoved),
+      thingsToAvoid: answers.thingsToAvoid || "",
+      inspirations: answers.inspirations || "",
+      biggestChallenge: answers.biggestChallenge || "",
+      notFor: answers.notFor || "",
+      differentiator: answers.differentiator || "",
+    };
+
     const brief = await BrandBrief.findOneAndUpdate(
       { userId: req.user._id },
-      { userId: req.user._id, ...aiResult, rawAnswers: answers },
+      { userId: req.user._id, ...aiResult, ...structuredAnswers, rawAnswers: answers },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
@@ -19,6 +37,9 @@ const generateBrand = async (req, res) => {
       industry: answers.industry || "",
       careerStage: answers.careerStage || "",
       goals: answers.goal || "",
+      ageRange: answers.ageRange || "",
+      gender: answers.gender || "",
+      interests: toArray(answers.interests),
     });
 
     return res.status(201).json({
@@ -60,6 +81,14 @@ const updateBrand = async (req, res) => {
       "targetAudience",
       "mission",
       "contentPillars",
+      "preferredPlatforms",
+      "postingFrequency",
+      "topicsLoved",
+      "thingsToAvoid",
+      "inspirations",
+      "biggestChallenge",
+      "notFor",
+      "differentiator",
     ];
 
     const updates = {};
