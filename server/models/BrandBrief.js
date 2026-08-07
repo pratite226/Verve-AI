@@ -32,6 +32,38 @@ const brandBriefSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    preferredPlatforms: {
+      type: [String],
+      default: [],
+    },
+    postingFrequency: {
+      type: String,
+      default: "",
+    },
+    topicsLoved: {
+      type: [String],
+      default: [],
+    },
+    thingsToAvoid: {
+      type: String,
+      default: "",
+    },
+    inspirations: {
+      type: String,
+      default: "",
+    },
+    biggestChallenge: {
+      type: String,
+      default: "",
+    },
+    notFor: {
+      type: String,
+      default: "",
+    },
+    differentiator: {
+      type: String,
+      default: "",
+    },
     rawAnswers: {
       type: mongoose.Schema.Types.Mixed,
       default: {},

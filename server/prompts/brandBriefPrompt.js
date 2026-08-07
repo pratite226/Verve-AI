@@ -7,10 +7,24 @@ Intake answers:
 - What they do: ${answers.whatTheyDo}
 - Industry: ${answers.industry}
 - Career stage: ${answers.careerStage}
+- Age range: ${answers.ageRange || "not provided"}
+- Gender: ${answers.gender || "not provided"}
+- Interests: ${answers.interests || "not provided"}
 - Target audience: ${answers.audience}
 - Goal: ${answers.goal}
 - Personality / tone preference: ${answers.personality}
 - Achievements: ${answers.achievements}
+- Topics they love talking about: ${answers.topicsLoved || "not provided"}
+- Things to avoid (tone or topics): ${answers.thingsToAvoid || "not provided"}
+- People/brands whose voice they admire: ${answers.inspirations || "not provided"}
+- Biggest challenge right now: ${answers.biggestChallenge || "not provided"}
+- Who they are NOT for: ${answers.notFor || "not provided"}
+- What makes them different from peers: ${answers.differentiator || "not provided"}
+
+Use the differentiator and "who they are NOT for" answers to sharpen the positioning statement so it
+is specific rather than generic. Let their interests and topics they love talking about inform the
+content pillars. Respect anything listed under "things to avoid" — never contradict it in the tone
+or positioning you produce.
 
 Return exactly this JSON shape and nothing else:
 {

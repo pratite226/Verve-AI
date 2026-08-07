@@ -6,7 +6,9 @@ Brand context (stay consistent with this):
 - Positioning: ${brief.positioning}
 - Tone: ${brief.tone}
 - Target audience: ${brief.targetAudience}
+${brief.differentiator ? `- What makes them different: ${brief.differentiator}` : ""}
 ${pillar ? `- This post should specifically support the content pillar: "${pillar}"` : ""}
+${brief.thingsToAvoid ? `- Hard constraint, never violate: avoid ${brief.thingsToAvoid}` : ""}
 
 Topic for this post: ${topic}
 
