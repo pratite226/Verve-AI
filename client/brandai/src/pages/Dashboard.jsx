@@ -86,12 +86,24 @@ const Dashboard = () => {
               </div>
               <div className="sm:col-span-2">
                 <p className="field-label">Content pillars</p>
-                <ul className="mt-2 flex flex-wrap gap-2">
-                  {brief.contentPillars?.map((pillar) => (
-                    <li key={pillar} className="border border-line px-3 py-1 font-mono text-xs uppercase tracking-widest">
-                      {pillar}
-                    </li>
-                  ))}
+                <ul className="mt-3 space-y-2">
+                  {brief.contentPillars?.map((pillar) => {
+                    const weight =
+                      brief.pillarWeights?.[pillar] ??
+                      Math.round(100 / (brief.contentPillars.length || 1));
+                    return (
+                      <li key={pillar} className="flex items-center gap-3">
+                        <span className="w-40 shrink-0 truncate text-sm">{pillar}</span>
+                        <div className="h-1.5 flex-1 bg-line/60">
+                          <div
+                            className="h-full bg-cobalt transition-[width] duration-500"
+                            style={{ width: `${weight}%` }}
+                          />
+                        </div>
+                        <span className="w-10 shrink-0 text-right font-mono text-xs text-muted">{weight}%</span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             </div>

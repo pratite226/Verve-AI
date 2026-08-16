@@ -14,6 +14,7 @@ const Settings = () => {
     targetAudience: "",
     mission: "",
     contentPillars: [],
+    pillarWeights: {},
   });
   const [pillarInput, setPillarInput] = useState("");
 
@@ -34,6 +35,7 @@ const Settings = () => {
           targetAudience: b.targetAudience || "",
           mission: b.mission || "",
           contentPillars: b.contentPillars || [],
+          pillarWeights: b.pillarWeights || {},
         });
       })
       .catch(() => setError("Couldn't load your Brand Brief."))
@@ -46,16 +48,39 @@ const Settings = () => {
   };
 
   const addPillar = () => {
-    if (!pillarInput.trim()) return;
-    setForm({ ...form, contentPillars: [...form.contentPillars, pillarInput.trim()] });
+    const name = pillarInput.trim();
+    if (!name) return;
+    setForm({
+      ...form,
+      contentPillars: [...form.contentPillars, name],
+      pillarWeights: { ...form.pillarWeights, [name]: 0 },
+    });
     setPillarInput("");
     setSaved(false);
   };
 
   const removePillar = (index) => {
-    setForm({ ...form, contentPillars: form.contentPillars.filter((_, i) => i !== index) });
+    const name = form.contentPillars[index];
+    const restWeights = { ...form.pillarWeights };
+    delete restWeights[name];
+    setForm({
+      ...form,
+      contentPillars: form.contentPillars.filter((_, i) => i !== index),
+      pillarWeights: restWeights,
+    });
     setSaved(false);
   };
+
+  const pillarWeight = (name) =>
+    form.pillarWeights[name] ?? Math.round(100 / (form.contentPillars.length || 1));
+
+  const setPillarWeight = (name, value) => {
+    const weight = Math.max(0, Math.min(100, Number(value) || 0));
+    setForm({ ...form, pillarWeights: { ...form.pillarWeights, [name]: weight } });
+    setSaved(false);
+  };
+
+  const totalWeight = form.contentPillars.reduce((sum, name) => sum + pillarWeight(name), 0);
 
   const handleSave = async () => {
     setSaving(true);
@@ -138,14 +163,30 @@ const Settings = () => {
             </div>
 
             <div>
-              <label className="field-label">Content pillars</label>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="flex items-center justify-between">
+                <label className="field-label">Content pillars</label>
+                {form.contentPillars.length > 0 && (
+                  <span className={`font-mono text-xs ${totalWeight === 100 ? "text-muted" : "text-red-700"}`}>
+                    {totalWeight}% total
+                  </span>
+                )}
+              </div>
+              <div className="mt-2 space-y-2">
                 {form.contentPillars.map((pillar, i) => (
-                  <span
+                  <div
                     key={i}
-                    className="flex items-center gap-2 border border-line px-3 py-1.5 font-mono text-xs uppercase tracking-widest"
+                    className="flex items-center gap-3 border border-line px-3 py-1.5 font-mono text-xs uppercase tracking-widest"
                   >
-                    {pillar}
+                    <span className="flex-1 normal-case tracking-normal font-body text-sm text-ink">{pillar}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={pillarWeight(pillar)}
+                      onChange={(e) => setPillarWeight(pillar, e.target.value)}
+                      className="w-16 border border-line bg-transparent px-2 py-1 text-right font-mono text-xs"
+                    />
+                    <span className="text-muted">%</span>
                     <button
                       type="button"
                       onClick={() => removePillar(i)}
@@ -153,7 +194,7 @@ const Settings = () => {
                     >
                       ×
                     </button>
-                  </span>
+                  </div>
                 ))}
               </div>
               <div className="mt-3 flex gap-2">

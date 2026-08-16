@@ -32,6 +32,11 @@ const brandBriefSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    pillarWeights: {
+      type: Map,
+      of: Number,
+      default: {},
+    },
     preferredPlatforms: {
       type: [String],
       default: [],

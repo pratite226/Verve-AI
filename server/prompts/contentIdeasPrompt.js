@@ -1,4 +1,4 @@
-const buildContentIdeasPrompt = (brief, count = 8) => {
+const buildContentIdeasPrompt = (brief, count = 8, excludeIdeas = []) => {
   return `
 You are a personal branding content strategist. Generate ${count} content post ideas
 for this person, based on their brand context below.
@@ -17,6 +17,7 @@ Rules:
 - Favor angles that connect to the topics they love, where it fits naturally
 - Mix formats where relevant: personal story, industry tip, opinion, case study, question to audience
 - Do not repeat similar ideas
+${excludeIdeas.length ? `- Do NOT repeat or closely resemble any of these already-shown ideas:\n${excludeIdeas.map((i) => `  - ${i}`).join("\n")}` : ""}
 
 Return ONLY a JSON array of strings, nothing else, no markdown fences. Example shape:
 ["idea one", "idea two", "idea three"]

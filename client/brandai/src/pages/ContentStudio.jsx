@@ -1,14 +1,37 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
 
 const PLATFORMS = ["linkedin", "instagram", "twitter"];
+const TONES = ["Professional", "Casual", "Bold", "Educational", "Storytelling", "Inspirational", "Funny", "Gen-Z"];
+const LENGTHS = [
+  { value: "short", label: "Short" },
+  { value: "medium", label: "Medium" },
+  { value: "long", label: "Long" },
+];
+const REFINE_ACTIONS = [
+  { action: "improve", label: "Improve" },
+  { action: "shorten", label: "Shorten" },
+  { action: "more_engaging", label: "More engaging" },
+  { action: "add_hook", label: "Add hook" },
+  { action: "add_cta", label: "Add CTA" },
+  { action: "more_professional", label: "More professional" },
+  { action: "more_casual", label: "More casual" },
+];
+const STATUS_FILTERS = [
+  { value: "all", label: "All" },
+  { value: "draft", label: "Draft" },
+  { value: "scheduled", label: "Planned" },
+  { value: "posted", label: "Published" },
+];
 
 const ContentStudio = () => {
   const [brief, setBrief] = useState(null);
   const [topic, setTopic] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState(["linkedin"]);
   const [selectedPillar, setSelectedPillar] = useState("");
+  const [tone, setTone] = useState("");
+  const [length, setLength] = useState("medium");
 
   const [ideas, setIdeas] = useState([]);
   const [ideasLoading, setIdeasLoading] = useState(false);
@@ -20,6 +43,12 @@ const ContentStudio = () => {
   const [draftsLoading, setDraftsLoading] = useState(true);
 
   const [copiedId, setCopiedId] = useState(null);
+  const [refiningId, setRefiningId] = useState(null);
+  const [updatingId, setUpdatingId] = useState(null);
+
+  const [platformFilter, setPlatformFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [search, setSearch] = useState("");
 
   const loadDrafts = () => {
     setDraftsLoading(true);
@@ -45,10 +74,11 @@ const ContentStudio = () => {
   const handleGetIdeas = async () => {
     setIdeasLoading(true);
     try {
-      const { data } = await api.post("/content/ideas", { count: 8 });
-      setIdeas(data.ideas || []);
+      const { data } = await api.post("/content/ideas", { count: 8, exclude: ideas });
+      const newIdeas = (data.ideas || []).filter((idea) => !ideas.includes(idea));
+      setIdeas((prev) => [...prev, ...newIdeas]);
     } catch {
-      setIdeas([]);
+      // keep existing ideas on failure
     } finally {
       setIdeasLoading(false);
     }
@@ -66,12 +96,16 @@ const ContentStudio = () => {
           platform: selectedPlatforms[0],
           topic,
           pillar: selectedPillar || undefined,
+          tone: tone || undefined,
+          length,
         });
       } else {
         await api.post("/content/generate-multi", {
           platforms: selectedPlatforms,
           topic,
           pillar: selectedPillar || undefined,
+          tone: tone || undefined,
+          length,
         });
       }
       setTopic("");
@@ -97,6 +131,40 @@ const ContentStudio = () => {
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 1500);
   };
+
+  const handleRefine = async (id, action) => {
+    setRefiningId(id);
+    try {
+      const { data } = await api.put(`/content/${id}/refine`, { action });
+      setDrafts((prev) => prev.map((d) => (d._id === id ? data.draft : d)));
+    } catch {
+      // leave draft unchanged, user can retry
+    } finally {
+      setRefiningId(null);
+    }
+  };
+
+  const handleMarkPosted = async (id) => {
+    setUpdatingId(id);
+    try {
+      const { data } = await api.put(`/content/${id}/status`, { status: "posted" });
+      setDrafts((prev) => prev.map((d) => (d._id === id ? data.draft : d)));
+    } catch {
+      // leave draft unchanged, user can retry
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const filteredDrafts = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return drafts.filter((d) => {
+      if (platformFilter !== "all" && d.platform !== platformFilter) return false;
+      if (statusFilter !== "all" && d.status !== statusFilter) return false;
+      if (q && !d.content.toLowerCase().includes(q) && !d.topic.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [drafts, platformFilter, statusFilter, search]);
 
   return (
     <div className="min-h-screen bg-paper">
@@ -125,7 +193,7 @@ const ContentStudio = () => {
               disabled={ideasLoading}
               className="btn-secondary disabled:opacity-50"
             >
-              {ideasLoading ? "Thinking…" : "Get ideas"}
+              {ideasLoading ? "Thinking…" : ideas.length > 0 ? "Generate more" : "Get ideas"}
             </button>
           </div>
           {ideas.length > 0 && (
@@ -174,6 +242,36 @@ selectedPlatforms.includes(p)
             </div>
           </div>
 
+          <div className="mt-6 grid gap-6 sm:grid-cols-2">
+            <div>
+              <label className="field-label" htmlFor="tone">Tone (optional)</label>
+              <select
+                id="tone"
+                className="field-input mt-2"
+                value={tone}
+                onChange={(e) => setTone(e.target.value)}
+              >
+                <option value="">Use brand default</option>
+                {TONES.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="field-label" htmlFor="length">Length</label>
+              <select
+                id="length"
+                className="field-input mt-2"
+                value={length}
+                onChange={(e) => setLength(e.target.value)}
+              >
+                {LENGTHS.map((l) => (
+                  <option key={l.value} value={l.value}>{l.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           {brief?.contentPillars?.length > 0 && (
             <div className="mt-6">
               <p className="field-label">Content pillar (optional)</p>
@@ -216,16 +314,58 @@ selectedPlatforms.includes(p)
         </div>
 
         <div className="mt-16 border-t border-line pt-10">
-          <p className="field-label">Your drafts</p>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <p className="field-label">Your drafts</p>
+            <input
+              type="search"
+              placeholder="Search your content…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="field-input w-56"
+            />
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-4">
+            <div className="flex flex-wrap gap-2">
+              {["all", ...PLATFORMS].map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPlatformFilter(p)}
+                  className={`border px-3 py-1 font-mono text-xs uppercase tracking-widest ${
+                    platformFilter === p ? "border-ink bg-ink text-paper" : "border-line text-ink/70"
+                  }`}
+                >
+                  {p === "all" ? "All" : p}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {STATUS_FILTERS.map((s) => (
+                <button
+                  key={s.value}
+                  type="button"
+                  onClick={() => setStatusFilter(s.value)}
+                  className={`border px-3 py-1 font-mono text-xs uppercase tracking-widest ${
+                    statusFilter === s.value ? "border-cobalt text-cobalt" : "border-line text-ink/70"
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {draftsLoading && <p className="mt-4 text-sm text-muted">Loading drafts…</p>}
 
-          {!draftsLoading && drafts.length === 0 && (
-            <p className="mt-4 text-sm text-muted">No drafts yet — generate your first post above.</p>
+          {!draftsLoading && filteredDrafts.length === 0 && (
+            <p className="mt-4 text-sm text-muted">
+              {drafts.length === 0 ? "No drafts yet — generate your first post above." : "No drafts match your filters."}
+            </p>
           )}
 
           <div className="mt-4 space-y-4">
-            {drafts.map((draft) => (
+            {filteredDrafts.map((draft) => (
               <div key={draft._id} className="border border-line p-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -245,7 +385,7 @@ selectedPlatforms.includes(p)
                 <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-ink/90">
                   {draft.content}
                 </p>
-                <div className="mt-4 flex gap-4">
+                <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
                   <button
                     type="button"
                     onClick={() => handleCopy(draft._id, draft.content)}
@@ -253,6 +393,16 @@ selectedPlatforms.includes(p)
                   >
                     {copiedId === draft._id ? "Copied!" : "Copy"}
                   </button>
+                  {draft.status === "scheduled" && (
+                    <button
+                      type="button"
+                      onClick={() => handleMarkPosted(draft._id)}
+                      disabled={updatingId === draft._id}
+                      className="font-mono text-xs uppercase tracking-widest text-cobalt hover:underline disabled:opacity-50"
+                    >
+                      {updatingId === draft._id ? "Marking…" : "Mark as posted"}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => handleDelete(draft._id)}
@@ -260,6 +410,19 @@ selectedPlatforms.includes(p)
                   >
                     Delete
                   </button>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">
+                  {REFINE_ACTIONS.map(({ action, label }) => (
+                    <button
+                      key={action}
+                      type="button"
+                      onClick={() => handleRefine(draft._id, action)}
+                      disabled={refiningId === draft._id}
+                      className="border border-line px-2.5 py-1 text-xs text-ink/70 hover:border-ink hover:text-ink disabled:opacity-40"
+                    >
+                      {refiningId === draft._id ? "…" : label}
+                    </button>
+                  ))}
                 </div>
               </div>
             ))}
