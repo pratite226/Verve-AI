@@ -9,6 +9,7 @@ import WeeklyPlanner from './pages/WeeklyPlanner.jsx'
 import BrandBrief from './pages/BrandBrief.jsx'
 import Settings from './pages/Settings.jsx'
 import Canvas from './pages/Canvas.jsx'
+import ProtectedRoute from './routes/ProtectedRoute.jsx'
 
 function App() {
   return (
@@ -16,13 +17,13 @@ function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
-      <Route path="/onboarding" element={<Onboarding />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/content-studio" element={<ContentStudio />} />
-      <Route path="/planner" element={<WeeklyPlanner />} />
-      <Route path="/profile-makeover" element={<BrandBrief />} />
-      <Route path="/settings" element={<Settings />} />
-      <Route path="/canvas" element={<Canvas />} />
+      <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/content-studio" element={<ProtectedRoute><ContentStudio /></ProtectedRoute>} />
+      <Route path="/planner" element={<ProtectedRoute><WeeklyPlanner /></ProtectedRoute>} />
+      <Route path="/profile-makeover" element={<ProtectedRoute><BrandBrief /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path="/canvas" element={<ProtectedRoute><Canvas /></ProtectedRoute>} />
     </Routes>
   )
 }

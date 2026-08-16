@@ -25,6 +25,8 @@ const WeeklyPlanner = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [schedulingId, setSchedulingId] = useState(null);
+  const [planning, setPlanning] = useState(false);
+  const [dragOverDay, setDragOverDay] = useState(null);
 
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
@@ -69,6 +71,26 @@ const WeeklyPlanner = () => {
     } finally {
       setSchedulingId(null);
     }
+  };
+
+  const handlePlanWeek = async () => {
+    setPlanning(true);
+    setError("");
+    try {
+      await api.post("/content/planner/generate", { weekStart: toDateInputValue(weekStart) });
+      loadPlanner();
+    } catch (err) {
+      setError(err.response?.data?.message || "Couldn't plan this week. Please try again.");
+    } finally {
+      setPlanning(false);
+    }
+  };
+
+  const handleDrop = (day, e) => {
+    e.preventDefault();
+    setDragOverDay(null);
+    const draftId = e.dataTransfer.getData("text/plain");
+    if (draftId) handleSchedule(draftId, toDateInputValue(day));
   };
 
   const goPrevWeek = () => {
@@ -120,6 +142,16 @@ const WeeklyPlanner = () => {
           </div>
         </div>
 
+        <button
+          type="button"
+          onClick={handlePlanWeek}
+          disabled={planning}
+          className="btn-primary mt-6 disabled:opacity-50"
+        >
+          {planning && <span className="spinner" aria-hidden="true" />}
+          {planning ? "Planning…" : "Plan this week with AI"}
+        </button>
+
         {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
         {loading && <p className="mt-8 text-sm text-muted">Loading planner…</p>}
 
@@ -128,7 +160,18 @@ const WeeklyPlanner = () => {
             {/* Week grid */}
             <div className="mt-10 grid grid-cols-1 gap-4 border-t border-line pt-8 sm:grid-cols-7">
               {weekDays.map((day, i) => (
-                <div key={i} className="border border-line p-3">
+                <div
+                  key={i}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOverDay(i);
+                  }}
+                  onDragLeave={() => setDragOverDay((d) => (d === i ? null : d))}
+                  onDrop={(e) => handleDrop(day, e)}
+                  className={`border border-line p-3 transition-colors duration-150 ${
+                    dragOverDay === i ? "bg-paper-raised border-cobalt" : ""
+                  }`}
+                >
                   <p className="field-label">{DAY_LABELS[i]}</p>
                   <p className="mt-1 font-display text-lg">{formatDayHeader(day)}</p>
                   <div className="mt-3 space-y-2">
@@ -136,7 +179,12 @@ const WeeklyPlanner = () => {
                       <p className="text-xs text-muted">Nothing scheduled</p>
                     )}
                     {draftsForDay(day).map((draft) => (
-                      <div key={draft._id} className="border border-line bg-paper p-2">
+                      <div
+                        key={draft._id}
+                        draggable
+                        onDragStart={(e) => e.dataTransfer.setData("text/plain", draft._id)}
+                        className="cursor-grab border border-line bg-paper p-2 active:cursor-grabbing"
+                      >
                         <p className="font-mono text-[10px] uppercase tracking-widest text-cobalt">
                           {draft.platform}
                         </p>
@@ -158,7 +206,12 @@ const WeeklyPlanner = () => {
               )}
               <div className="mt-4 space-y-3">
                 {unscheduledDrafts.map((draft) => (
-                  <div key={draft._id} className="flex items-center justify-between border border-line p-4">
+                  <div
+                    key={draft._id}
+                    draggable
+                    onDragStart={(e) => e.dataTransfer.setData("text/plain", draft._id)}
+                    className="flex cursor-grab items-center justify-between border border-line p-4 active:cursor-grabbing"
+                  >
                     <div className="min-w-0 flex-1 pr-4">
                       <span className="font-mono text-xs uppercase tracking-widest text-cobalt">
                         {draft.platform}

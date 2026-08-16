@@ -33,8 +33,12 @@ Return exactly this JSON shape and nothing else:
   "tone": "3-5 words describing voice and tone",
   "targetAudience": "one sentence describing the target audience",
   "mission": "1-2 sentence mission statement",
-  "contentPillars": ["pillar 1", "pillar 2", "pillar 3", "pillar 4"]
+  "contentPillars": ["pillar 1", "pillar 2", "pillar 3", "pillar 4"],
+  "pillarWeights": { "pillar 1": 40, "pillar 2": 30, "pillar 3": 20, "pillar 4": 10 }
 }
+
+"pillarWeights" must have exactly one integer percentage per pillar in "contentPillars" (same
+names), weighted by how much they should be talked about, and the percentages must sum to 100.
 `;
 };
 

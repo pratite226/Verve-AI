@@ -1,11 +1,16 @@
 const ContentDraft = require("../models/ContentDraft");
 const BrandBrief = require("../models/BrandBrief");
-const { generateContentPost, generateContentIdeas } = require("../services/aiService");
+const {
+  generateContentPost,
+  refineContentPost,
+  generateWeeklyPlan,
+  generateContentIdeas,
+} = require("../services/aiService");
 
 // @route POST /api/content/generate
 const generateContent = async (req, res) => {
   try {
-    const { platform, topic, pillar } = req.body;
+    const { platform, topic, pillar, tone, length } = req.body;
 
     if (!platform || !topic) {
       return res.status(400).json({
@@ -29,7 +34,7 @@ const generateContent = async (req, res) => {
       });
     }
 
-    const generatedText = await generateContentPost(brief, platform, topic, pillar);
+    const generatedText = await generateContentPost(brief, platform, topic, pillar, tone, length);
 
     const draft = await ContentDraft.create({
       userId: req.user._id,
@@ -53,7 +58,7 @@ const generateContent = async (req, res) => {
 // Body: { "platforms": ["linkedin", "instagram", "twitter"], "topic": "...", "pillar": "..." (optional) }
 const generateMultiPlatform = async (req, res) => {
   try {
-    const { platforms, topic, pillar } = req.body;
+    const { platforms, topic, pillar, tone, length } = req.body;
 
     if (!Array.isArray(platforms) || platforms.length === 0) {
       return res.status(400).json({
@@ -95,7 +100,7 @@ const generateMultiPlatform = async (req, res) => {
 
     // Generate posts for all platforms in parallel — faster than looping one at a time
     const results = await Promise.allSettled(
-      platforms.map((platform) => generateContentPost(brief, platform, topic, pillar))
+      platforms.map((platform) => generateContentPost(brief, platform, topic, pillar, tone, length))
     );
 
     const drafts = [];
@@ -191,6 +196,133 @@ const scheduleContent = async (req, res) => {
   }
 };
 
+// @route PUT /api/content/:id/status
+// Body: { "status": "draft" | "scheduled" | "posted" }
+const updateContentStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ["draft", "scheduled", "posted"];
+
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `status must be one of: ${validStatuses.join(", ")}`,
+      });
+    }
+
+    const draft = await ContentDraft.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user._id },
+      { status },
+      { new: true }
+    );
+
+    if (!draft) {
+      return res.status(404).json({ success: false, message: "Draft not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Draft status updated",
+      draft,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @route PUT /api/content/:id/refine
+// Body: { "action": "improve" | "shorten" | "more_engaging" | "more_professional" | "more_casual" | "add_hook" | "add_cta" | "add_storytelling" }
+const refineContent = async (req, res) => {
+  try {
+    const { action } = req.body;
+
+    if (!action) {
+      return res.status(400).json({ success: false, message: "action is required" });
+    }
+
+    const draft = await ContentDraft.findOne({ _id: req.params.id, userId: req.user._id });
+    if (!draft) {
+      return res.status(404).json({ success: false, message: "Draft not found" });
+    }
+
+    const brief = await BrandBrief.findOne({ userId: req.user._id });
+    if (!brief) {
+      return res.status(404).json({
+        success: false,
+        message: "No Brand Brief found — complete onboarding first",
+      });
+    }
+
+    draft.content = await refineContentPost(brief, draft.platform, draft.content, action);
+    await draft.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Draft refined successfully",
+      draft,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @route POST /api/content/planner/generate
+// Body: { "weekStart": "2026-07-14" }  (a Monday, YYYY-MM-DD)
+const generateWeeklyPlanContent = async (req, res) => {
+  try {
+    const { weekStart } = req.body;
+
+    if (!weekStart) {
+      return res.status(400).json({ success: false, message: "weekStart is required (YYYY-MM-DD)" });
+    }
+
+    const brief = await BrandBrief.findOne({ userId: req.user._id });
+    if (!brief) {
+      return res.status(404).json({
+        success: false,
+        message: "No Brand Brief found — complete onboarding first",
+      });
+    }
+
+    const validPlatforms = ["linkedin", "instagram", "twitter"];
+    const assignments = await generateWeeklyPlan(brief);
+
+    const results = await Promise.allSettled(
+      assignments
+        .filter((a) => validPlatforms.includes(a.platform) && a.dayOffset >= 0 && a.dayOffset <= 6)
+        .map(async (a) => {
+          const pillar = brief.contentPillars.includes(a.pillar) ? a.pillar : "";
+          const content = await generateContentPost(brief, a.platform, a.topic, pillar);
+
+          const scheduledDate = new Date(weekStart);
+          scheduledDate.setDate(scheduledDate.getDate() + a.dayOffset);
+
+          return ContentDraft.create({
+            userId: req.user._id,
+            platform: a.platform,
+            topic: a.topic,
+            pillar,
+            content,
+            status: "scheduled",
+            scheduledDate,
+          });
+        })
+    );
+
+    const drafts = results.filter((r) => r.status === "fulfilled").map((r) => r.value);
+    const failures = results.filter((r) => r.status === "rejected").map((r) => r.reason.message);
+
+    return res.status(201).json({
+      success: true,
+      message: `Planned ${drafts.length} post${drafts.length === 1 ? "" : "s"} for the week`,
+      drafts,
+      failures: failures.length > 0 ? failures : undefined,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @route GET /api/content/planner?start=2026-07-14&end=2026-07-20
 const getPlanner = async (req, res) => {
   try {
@@ -218,10 +350,11 @@ const getPlanner = async (req, res) => {
 };
 
 // @route POST /api/content/ideas
-// Body: { "count": 8 }  (count is optional, defaults to 8)
+// Body: { "count": 8, "exclude": ["idea already shown", ...] }  (both optional)
 const getContentIdeas = async (req, res) => {
   try {
     const count = req.body.count || 8;
+    const exclude = Array.isArray(req.body.exclude) ? req.body.exclude : [];
 
     const brief = await BrandBrief.findOne({ userId: req.user._id });
     if (!brief) {
@@ -231,7 +364,7 @@ const getContentIdeas = async (req, res) => {
       });
     }
 
-    const ideas = await generateContentIdeas(brief, count);
+    const ideas = await generateContentIdeas(brief, count, exclude);
 
     return res.status(200).json({
       success: true,
@@ -248,6 +381,9 @@ module.exports = {
   getContent,
   deleteContent,
   scheduleContent,
+  updateContentStatus,
+  refineContent,
+  generateWeeklyPlanContent,
   getPlanner,
   getContentIdeas,
 };

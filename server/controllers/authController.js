@@ -2,6 +2,10 @@ const bcrypt = require("bcrypt");
 const User = require("../models/User");
 const generateToken = require("../utils/generateToken");
 
+const PASSWORD_RULE = /^(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
+const PASSWORD_RULE_MESSAGE =
+  "Password must be at least 8 characters and include a number and a special character";
+
 // @route POST /signup
 const signup = async (req, res) => {
   try {
@@ -11,6 +15,13 @@ const signup = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Name, email, and password are required",
+      });
+    }
+
+    if (!PASSWORD_RULE.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message: PASSWORD_RULE_MESSAGE,
       });
     }
 

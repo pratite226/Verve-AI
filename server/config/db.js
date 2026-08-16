@@ -16,6 +16,6 @@ const connectDB = async () => {
             console.error("Allow your current IP address in MongoDB Atlas Network Access, or temporarily use 0.0.0.0/0.");
         }
     }
-};
+}
 
 module.exports = connectDB;

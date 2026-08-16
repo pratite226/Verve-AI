@@ -81,6 +81,7 @@ const updateBrand = async (req, res) => {
       "targetAudience",
       "mission",
       "contentPillars",
+      "pillarWeights",
       "preferredPlatforms",
       "postingFrequency",
       "topicsLoved",
