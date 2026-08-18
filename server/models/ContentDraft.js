@@ -37,4 +37,10 @@ const contentDraftSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Both compound indexes match real query patterns in contentController.js:
+// getContent-style status filtering, and getPlanner's date-range lookups — both always
+// scoped to a single user first, so userId leads each compound index.
+contentDraftSchema.index({ userId: 1, status: 1 });
+contentDraftSchema.index({ userId: 1, scheduledDate: 1 });
+
 module.exports = mongoose.model("ContentDraft", contentDraftSchema);

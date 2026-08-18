@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const User = require("../models/User");
 const generateToken = require("../utils/generateToken");
+const { isValidEmail } = require("../utils/validators");
 
 const PASSWORD_RULE = /^(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
 const PASSWORD_RULE_MESSAGE =
@@ -15,6 +16,13 @@ const signup = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Name, email, and password are required",
+      });
+    }
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid email address",
       });
     }
 
@@ -59,10 +67,10 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    if (!isValidEmail(email) || typeof password !== "string" || !password) {
       return res.status(400).json({
         success: false,
-        message: "Email and password are required",
+        message: "A valid email and password are required",
       });
     }
 

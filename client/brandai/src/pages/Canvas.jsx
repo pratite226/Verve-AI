@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
+import { readFileAsDataURL } from "../utils/async";
+import { useToast } from "../hooks/useToast.jsx";
 
 const CARD_SIZES = [
   "w-56 h-64",
@@ -20,6 +22,11 @@ const Canvas = () => {
   const [analysis, setAnalysis] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState("");
+
+  const [imagePreview, setImagePreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     const fetchNotes = async () => {
@@ -48,9 +55,45 @@ const Canvas = () => {
       setNotes((prev) => [...prev, data.note]);
       setNewNoteText("");
     } catch {
-      // ignore — user can retry
+      showToast("Couldn't add that note — try again.", { type: "error" });
     } finally {
       setAdding(false);
+    }
+  };
+
+  const handleFileSelected = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    try {
+      // Promise-wrapped FileReader (utils/async.js) — lets this read like the axios calls
+      // below instead of nesting an onload callback.
+      const dataUrl = await readFileAsDataURL(file);
+      setImagePreview({ file, dataUrl });
+    } catch {
+      showToast("Couldn't read that image file.", { type: "error" });
+    }
+  };
+
+  const handleConfirmImage = async () => {
+    if (!imagePreview) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", imagePreview.file);
+      const { data: uploadData } = await api.post("/canvas/upload", formData);
+
+      const { data } = await api.post("/canvas/notes", {
+        type: "image",
+        content: uploadData.url,
+      });
+      setNotes((prev) => [...prev, data.note]);
+      setImagePreview(null);
+    } catch (err) {
+      showToast(err.response?.data?.message || "Couldn't upload that image.", { type: "error" });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -120,6 +163,20 @@ const Canvas = () => {
           >
             {adding ? "Adding…" : "Add note"}
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            onChange={handleFileSelected}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="btn-secondary shrink-0"
+          >
+            Add image
+          </button>
           <button
             type="button"
             onClick={handleAnalyze}
@@ -129,6 +186,29 @@ const Canvas = () => {
             {analyzing ? "Analyzing…" : "Analyze my board"}
           </button>
         </div>
+
+        {imagePreview && (
+          <div className="mt-4 flex items-center gap-4 border border-line p-4">
+            <img src={imagePreview.dataUrl} alt="Preview" className="h-20 w-20 object-cover" />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleConfirmImage}
+                disabled={uploading}
+                className="btn-primary disabled:opacity-50"
+              >
+                {uploading ? "Uploading…" : "Add to board"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setImagePreview(null)}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
 
         {analyzeError && <p className="mt-4 text-sm text-red-700">{analyzeError}</p>}
 
@@ -170,9 +250,17 @@ const Canvas = () => {
                 }`}
               >
                 <p className="font-mono text-xs text-muted">{String(i + 1).padStart(2, "0")}</p>
-                <p className="mt-3 font-display text-lg leading-snug text-ink/90">
-                  {note.content}
-                </p>
+                {note.type === "image" ? (
+                  <img
+                    src={note.content}
+                    alt="Canvas note"
+                    className="mt-3 h-[calc(100%-2rem)] w-full object-cover"
+                  />
+                ) : (
+                  <p className="mt-3 font-display text-lg leading-snug text-ink/90">
+                    {note.content}
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={() => handleDeleteNote(note._id)}

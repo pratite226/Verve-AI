@@ -28,4 +28,8 @@ const canvasNoteSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Text index so board search/filter (future) can query note content directly in Mongo
+// instead of fetching every note and filtering in app code.
+canvasNoteSchema.index({ content: "text" });
+
 module.exports = mongoose.model("CanvasNote", canvasNoteSchema);

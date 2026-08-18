@@ -42,7 +42,54 @@
 | content | String | required — text, or image URL if `type: image` |
 | x, y | Number | board position, default `40, 40` |
 
+### `Analytics` (`server/models/Analytics.js`)
+| Field | Type | Notes |
+|---|---|---|
+| userId | ObjectId → User | required, unique + indexed — one document per user |
+| dailySnapshots | [{ date, postsCreated, postsByPlatform, postsByStatus }] | embedded, capped to a rolling ~90-day window (pruned by the nightly cron job) |
+
+**Embedding vs. referencing**: `Analytics.dailySnapshots` is *embedded* inside the user's
+document rather than living in its own collection keyed by `userId` — it's always read and
+written together with "this user's analytics," and it's bounded (pruned nightly), so embedding
+avoids an extra query for data that's never accessed independently. Everything else
+(`BrandBrief`, `ContentDraft`, `CanvasNote`) *references* `User` via an `ObjectId` instead,
+because those collections are unbounded, queried independently of the user record itself (e.g.
+"all drafts scheduled this week" across the *drafts* collection), and don't need to be loaded
+just because the user is.
+
+### Indexes
+- `ContentDraft`: compound `{ userId: 1, status: 1 }` and `{ userId: 1, scheduledDate: 1 }` —
+  match the actual query shapes in `contentController.js` (status-filtered lists, planner
+  date-range lookups), both always scoped to one user first.
+- `CanvasNote`: text index on `content` for board search.
+- `BrandBrief.userId`, `Analytics.userId`: unique indexes (one document per user).
+
+## 1a. PostgreSQL schema (billing only — `server/prisma/schema.prisma`)
+
+Billing/subscriptions are the one relational slice of the app — everything else stays on
+Mongo (see HLD.md "Tech Stack" for why). Accessed exclusively through Prisma's query builder
+(`config/prisma.js`), so there is no hand-built SQL string anywhere except the one intentional
+`$queryRaw` in `billingController.getSummary`, which uses a parameterized tagged template
+(never string concatenation) for the month-rollup GROUP BY that Prisma's `groupBy()` can't
+express directly.
+
+| Table | Key columns | Notes |
+|---|---|---|
+| `Plan` | `id` PK, `name` unique, `priceCents`, `interval`, `features` (Json) | seeded via `prisma/seed.js`, not user-created |
+| `Subscription` | `id` PK, `mongoUserId` (indexed, references Mongo's `User._id` — enforced at the app layer since no cross-database FK is possible), `planId` FK → `Plan.id`, `status`, `stripeSubscriptionId` | |
+| `Invoice` | `id` PK, `subscriptionId` FK → `Subscription.id`, `amountCents`, `status`, `issuedAt` (indexed) | `amountCents` is stored (not derived from `Plan.priceCents`) because it's a point-in-time billed fact — a plan's price can change after the invoice was issued |
+
+`billingController.subscribeUser` wraps the `Subscription` upsert and its first `Invoice`
+creation in a single `prisma.$transaction` — called from the Stripe webhook handler, so a
+crash mid-write can never leave a subscription active with no corresponding invoice (or vice
+versa).
+
 ## 2. API Reference
+
+### Analytics — `/api/analytics`
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| GET | `/overview` | — | `{ success, byPlatform, byPillar, byStatus, recentSnapshots }` — `byPlatform`/`byPillar`/`byStatus` come from a single `$facet` aggregation pipeline over `ContentDraft`; `recentSnapshots` is the last 30 entries of the caller's `Analytics.dailySnapshots` |
 
 All routes below except `POST /api/auth/signup` and `POST /api/auth/login` require
 `Authorization: Bearer <JWT>` (enforced by `authMiddleware.protect`).
@@ -91,6 +138,18 @@ All routes below except `POST /api/auth/signup` and `POST /api/auth/login` requi
 | Method | Path | Body | Returns |
 |---|---|---|---|
 | POST | `/optimize` | `{ currentHeadline?, currentAbout? }` (at least one required) | `{ success, optimizedHeadline, optimizedAbout, changesSummary }` |
+
+### Billing — `/api/billing` (Postgres-backed, see §1a)
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| GET | `/plans` | — (public, no auth) | `{ success, plans }` |
+| POST | `/checkout` | `{ planName }` | `{ success, url }` — Stripe Checkout Session URL to redirect the browser to |
+| POST | `/webhook` | raw Stripe event body + `stripe-signature` header | `{ received: true }` — verifies signature, then `checkout.session.completed` calls `subscribeUser` |
+| GET | `/invoices?status=&sort=issuedAt:desc` | — | `{ success, invoices }` — filtered + ordered, scoped to the caller's own subscription(s) |
+| GET | `/summary` | — | `{ success, byStatus, byMonth }` — `byStatus` via Prisma `groupBy()`, `byMonth` via a raw parameterized SQL `GROUP BY`/`JOIN` |
+
+Canvas also has `POST /api/canvas/upload` (multipart, field `image`) → `{ success, url }`, used
+by the client before creating an image-type `CanvasNote` with that URL as `content`.
 
 ## 3. Key Flows
 
@@ -183,3 +242,43 @@ client/brandai/src/
   client — malformed model output is caught and re-thrown as a descriptive `Error` (e.g. "AI
   returned an unparseable Brand Brief. Please try again.") that the controller's catch block
   turns into a clean JSON error response.
+- `server/middleware/errorMiddleware.js` is the final `app.use()` and catches anything passed
+  to `next(err)` instead of being handled by a controller's own try/catch (currently just
+  `multer` upload errors — bad file type, file too large — mapped to a clean `400`).
+
+## 6. Background jobs, real-time, and caching
+
+- **Cron** (`server/jobs/index.js`, `node-cron`, daily at 03:00): sweeps `Subscription`s whose
+  `currentPeriodEnd` has passed into `past_due`, and prunes `Analytics.dailySnapshots` entries
+  older than 90 days so that embedded array stays bounded (see §1's embedding note).
+- **WebSockets** (`server/services/socketService.js`, Socket.IO): the handshake is
+  authenticated with the same JWT as REST (`jsonwebtoken.verify`), and each socket joins a
+  `user:<id>` room. `contentController` emits `draft:created`/`draft:statusChanged` after a
+  mutation; the Stripe webhook emits `billing:updated`. Client pages (`ContentStudio.jsx`,
+  `WeeklyPlanner.jsx`) subscribe and just re-fetch on any event — this keeps multiple open
+  tabs for the same account in sync without a manual refresh.
+- **Redis caching** (`server/config/redis.js`): `GET /api/content` and
+  `GET /api/analytics/overview` are cached per-user for 5 minutes, invalidated on every
+  `ContentDraft` write (`invalidateContentCaches` in `contentController.js`). Degrades to "no
+  caching" if `REDIS_URL` is unset or unreachable — unlike the required auth secrets
+  (`validateEnv.js`), a missing cache layer makes requests slower, never incorrect, so it
+  fails soft rather than blocking boot.
+
+## 7. Frontend JS notes
+
+- **Hoisting**: the codebase uses `const`/`let` exclusively (no `var`) and defines functions
+  as `const fn = () => {}` rather than `function fn() {}` — both sidestep hoisting's more
+  surprising behaviors (`var`'s hoist-to-`undefined`, function-declaration hoisting letting a
+  function be called above where it's defined in the file). This is a deliberate style
+  choice, not something with its own runtime feature to point to.
+- **Closures**: `debounce` (`client/brandai/src/utils/async.js`) and the toast auto-dismiss
+  timers (`client/brandai/src/hooks/useToast.jsx`) both rely on values captured in an
+  enclosing scope persisting across calls — see the inline comments in those two files for the
+  specific mechanism in each.
+- **Event loop**: `useToast`'s `setTimeout`-based auto-dismiss is a macrotask, scheduled to run
+  after the current call stack (and any pending microtasks/state updates) finish — see the
+  comment at the top of `useToast.jsx`.
+- **Promises vs. callbacks / async-await**: `utils/async.js`'s `readFileAsDataURL` wraps
+  `FileReader`'s callback-based API (`onload`/`onerror`) in a `Promise`, so the Canvas image
+  upload flow (`Canvas.jsx`) can `await` it the same way it awaits the axios upload call right
+  after — both read as sequential steps instead of nested callbacks.
