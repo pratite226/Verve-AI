@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const [brief, setBrief] = useState(null);
+  const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -19,6 +20,13 @@ const Dashboard = () => {
         }
       })
       .finally(() => setLoading(false));
+
+    // Real usage stats (Mongo aggregation pipeline on the server) — best-effort, the
+    // dashboard is still useful without it.
+    api
+      .get("/analytics/overview")
+      .then((res) => setOverview(res.data))
+      .catch(() => {});
   }, []);
 
   return (
@@ -107,6 +115,33 @@ const Dashboard = () => {
                 </ul>
               </div>
             </div>
+
+            {overview && (overview.byPlatform.length > 0 || overview.byStatus.length > 0) && (
+              <div className="mt-16 grid gap-8 border-t border-line pt-10 sm:grid-cols-2">
+                <div>
+                  <p className="field-label">Posts by platform</p>
+                  <ul className="mt-3 space-y-2">
+                    {overview.byPlatform.map((row) => (
+                      <li key={row._id} className="flex items-center justify-between text-sm">
+                        <span className="capitalize">{row._id}</span>
+                        <span className="font-mono text-xs text-muted">{row.count}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <p className="field-label">Posts by status</p>
+                  <ul className="mt-3 space-y-2">
+                    {overview.byStatus.map((row) => (
+                      <li key={row._id} className="flex items-center justify-between text-sm">
+                        <span className="capitalize">{row._id}</span>
+                        <span className="font-mono text-xs text-muted">{row.count}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
 
             <div className="mt-16 grid gap-4 border-t border-line pt-10 sm:grid-cols-3">
               <Link to="/content-studio" className="border border-line p-6 hover:border-ink">

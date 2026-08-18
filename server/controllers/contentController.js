@@ -6,11 +6,27 @@ const {
   generateWeeklyPlan,
   generateContentIdeas,
 } = require("../services/aiService");
+const { recordDraftEvent } = require("../services/analyticsService");
+const { sanitizeText } = require("../utils/validators");
+const { cacheGet, cacheSet, cacheDel } = require("../config/redis");
+const { emitToUser } = require("../services/socketService");
+
+const CONTENT_LIST_TTL_SECONDS = 300;
+const contentListCacheKey = (userId) => `content:list:${userId}`;
+
+// Every ContentDraft mutation invalidates both caches it could have changed the shape of —
+// the content list itself, and the analytics overview (byPlatform/byPillar/byStatus counts
+// derived from ContentDraft — see analyticsController.js).
+const invalidateContentCaches = (userId) => {
+  cacheDel(contentListCacheKey(userId)).catch(() => {});
+  cacheDel(`analytics:overview:${userId}`).catch(() => {});
+};
 
 // @route POST /api/content/generate
 const generateContent = async (req, res) => {
   try {
-    const { platform, topic, pillar, tone, length } = req.body;
+    const { platform, pillar, tone, length } = req.body;
+    const topic = sanitizeText(req.body.topic);
 
     if (!platform || !topic) {
       return res.status(400).json({
@@ -44,6 +60,14 @@ const generateContent = async (req, res) => {
       content: generatedText,
     });
 
+    // Fire-and-forget: analytics is a secondary read model, a failure here shouldn't fail
+    // the primary content-generation request.
+    recordDraftEvent(req.user._id, { platform, status: "draft", isNew: true }).catch((err) =>
+      console.error("analytics recordDraftEvent failed:", err.message)
+    );
+    invalidateContentCaches(req.user._id);
+    emitToUser(req.user._id, "draft:created", draft);
+
     return res.status(201).json({
       success: true,
       message: "Content generated successfully",
@@ -58,7 +82,8 @@ const generateContent = async (req, res) => {
 // Body: { "platforms": ["linkedin", "instagram", "twitter"], "topic": "...", "pillar": "..." (optional) }
 const generateMultiPlatform = async (req, res) => {
   try {
-    const { platforms, topic, pillar, tone, length } = req.body;
+    const { platforms, pillar, tone, length } = req.body;
+    const topic = sanitizeText(req.body.topic);
 
     if (!Array.isArray(platforms) || platforms.length === 0) {
       return res.status(400).json({
@@ -118,11 +143,16 @@ const generateMultiPlatform = async (req, res) => {
           pillar: pillar || "",
           content: result.value,
         });
+        recordDraftEvent(req.user._id, { platform, status: "draft", isNew: true }).catch((err) =>
+          console.error("analytics recordDraftEvent failed:", err.message)
+        );
         drafts.push(draft);
       } else {
         failures.push({ platform, error: result.reason.message });
       }
     }
+
+    if (drafts.length > 0) invalidateContentCaches(req.user._id);
 
     return res.status(201).json({
       success: true,
@@ -138,7 +168,15 @@ const generateMultiPlatform = async (req, res) => {
 // @route GET /api/content
 const getContent = async (req, res) => {
   try {
+    const cacheKey = contentListCacheKey(req.user._id);
+    const cached = await cacheGet(cacheKey);
+    if (cached) {
+      return res.status(200).json({ success: true, drafts: cached, cached: true });
+    }
+
     const drafts = await ContentDraft.find({ userId: req.user._id }).sort({ createdAt: -1 });
+    await cacheSet(cacheKey, drafts, CONTENT_LIST_TTL_SECONDS);
+
     return res.status(200).json({ success: true, drafts });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -156,6 +194,8 @@ const deleteContent = async (req, res) => {
     if (!draft) {
       return res.status(404).json({ success: false, message: "Draft not found" });
     }
+
+    invalidateContentCaches(req.user._id);
 
     return res.status(200).json({ success: true, message: "Draft deleted" });
   } catch (error) {
@@ -185,6 +225,8 @@ const scheduleContent = async (req, res) => {
     if (!draft) {
       return res.status(404).json({ success: false, message: "Draft not found" });
     }
+
+    invalidateContentCaches(req.user._id);
 
     return res.status(200).json({
       success: true,
@@ -219,6 +261,12 @@ const updateContentStatus = async (req, res) => {
     if (!draft) {
       return res.status(404).json({ success: false, message: "Draft not found" });
     }
+
+    recordDraftEvent(req.user._id, { status, isNew: false }).catch((err) =>
+      console.error("analytics recordDraftEvent failed:", err.message)
+    );
+    invalidateContentCaches(req.user._id);
+    emitToUser(req.user._id, "draft:statusChanged", draft);
 
     return res.status(200).json({
       success: true,
@@ -255,6 +303,7 @@ const refineContent = async (req, res) => {
 
     draft.content = await refineContentPost(brief, draft.platform, draft.content, action);
     await draft.save();
+    invalidateContentCaches(req.user._id);
 
     return res.status(200).json({
       success: true,
@@ -297,7 +346,7 @@ const generateWeeklyPlanContent = async (req, res) => {
           const scheduledDate = new Date(weekStart);
           scheduledDate.setDate(scheduledDate.getDate() + a.dayOffset);
 
-          return ContentDraft.create({
+          const draft = await ContentDraft.create({
             userId: req.user._id,
             platform: a.platform,
             topic: a.topic,
@@ -306,11 +355,21 @@ const generateWeeklyPlanContent = async (req, res) => {
             status: "scheduled",
             scheduledDate,
           });
+
+          recordDraftEvent(req.user._id, {
+            platform: a.platform,
+            status: "scheduled",
+            isNew: true,
+          }).catch((err) => console.error("analytics recordDraftEvent failed:", err.message));
+
+          return draft;
         })
     );
 
     const drafts = results.filter((r) => r.status === "fulfilled").map((r) => r.value);
     const failures = results.filter((r) => r.status === "rejected").map((r) => r.reason.message);
+
+    if (drafts.length > 0) invalidateContentCaches(req.user._id);
 
     return res.status(201).json({
       success: true,

@@ -1,6 +1,7 @@
 const CanvasNote = require("../models/CanvasNote");
 const BrandBrief = require("../models/BrandBrief");
 const { generateCanvasAnalysis } = require("../services/aiService");
+const { sanitizeText } = require("../utils/validators");
 
 // @route POST /api/canvas/notes
 // Body: { "type": "text"|"image", "content": "...", "x": 40, "y": 40 }
@@ -15,7 +16,7 @@ const createNote = async (req, res) => {
     const note = await CanvasNote.create({
       userId: req.user._id,
       type: type || "text",
-      content,
+      content: sanitizeText(content),
       x: x ?? 40,
       y: y ?? 40,
     });
@@ -44,6 +45,9 @@ const updateNote = async (req, res) => {
     const updates = {};
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) updates[field] = req.body[field];
+    }
+    if (updates.content !== undefined) {
+      updates.content = sanitizeText(updates.content);
     }
 
     const note = await CanvasNote.findOneAndUpdate(
@@ -80,6 +84,20 @@ const deleteNote = async (req, res) => {
   }
 };
 
+// @route POST /api/canvas/upload
+// multipart/form-data, field name "image" — handled by multer (uploadMiddleware) before
+// this runs. Returns a URL the client then sends as a CanvasNote's content when creating
+// an image-type note, rather than baking note-creation into the upload itself, so a user
+// can preview the image before deciding whether to drop it on the board.
+const uploadImage = async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: "No image file provided" });
+  }
+
+  const url = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+  return res.status(201).json({ success: true, url });
+};
+
 // @route POST /api/canvas/analyze
 const analyzeBoard = async (req, res) => {
   try {
@@ -109,4 +127,4 @@ const analyzeBoard = async (req, res) => {
   }
 };
 
-module.exports = { createNote, getNotes, updateNote, deleteNote, analyzeBoard };
+module.exports = { createNote, getNotes, updateNote, deleteNote, analyzeBoard, uploadImage };

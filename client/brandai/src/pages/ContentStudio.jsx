@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
+import { debounce } from "../utils/async";
+import { useToast } from "../hooks/useToast.jsx";
+import { getSocket } from "../services/socket";
 
 const PLATFORMS = ["linkedin", "instagram", "twitter"];
 const TONES = ["Professional", "Casual", "Bold", "Educational", "Storytelling", "Inspirational", "Funny", "Gen-Z"];
@@ -48,7 +51,21 @@ const ContentStudio = () => {
 
   const [platformFilter, setPlatformFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const { showToast } = useToast();
+
+  // searchInput updates the text box instantly; the debounced setter only commits to
+  // `search` (which actually drives filtering) 300ms after typing pauses — avoids
+  // re-filtering the list on every keystroke. useRef so the debounced function (and its
+  // closed-over timer) is created once, not recreated — and re-debounced from scratch —
+  // on every render.
+  const debouncedSetSearch = useRef(debounce(setSearch, 300)).current;
+
+  const handleSearchChange = (value) => {
+    setSearchInput(value);
+    debouncedSetSearch(value);
+  };
 
   const loadDrafts = () => {
     setDraftsLoading(true);
@@ -63,6 +80,23 @@ const ContentStudio = () => {
     api.get("/brand").then((res) => setBrief(res.data.brief)).catch(() => setBrief(null));
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadDrafts();
+  }, []);
+
+  // Keeps this page's draft list in sync if a draft is created/updated from another open
+  // tab (or, later, the weekly planner) for the same account — without this, you'd only
+  // see it after a manual refresh.
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const onDraftChange = () => loadDrafts();
+    socket.on("draft:created", onDraftChange);
+    socket.on("draft:statusChanged", onDraftChange);
+
+    return () => {
+      socket.off("draft:created", onDraftChange);
+      socket.off("draft:statusChanged", onDraftChange);
+    };
   }, []);
 
   const togglePlatform = (platform) => {
@@ -122,7 +156,7 @@ const ContentStudio = () => {
       await api.delete(`/content/${id}`);
       setDrafts((prev) => prev.filter((d) => d._id !== id));
     } catch {
-      // silently ignore — draft stays in list, user can retry
+      showToast("Couldn't delete that draft — try again.", { type: "error" });
     }
   };
 
@@ -138,7 +172,7 @@ const ContentStudio = () => {
       const { data } = await api.put(`/content/${id}/refine`, { action });
       setDrafts((prev) => prev.map((d) => (d._id === id ? data.draft : d)));
     } catch {
-      // leave draft unchanged, user can retry
+      showToast("Couldn't refine that draft — try again.", { type: "error" });
     } finally {
       setRefiningId(null);
     }
@@ -150,7 +184,7 @@ const ContentStudio = () => {
       const { data } = await api.put(`/content/${id}/status`, { status: "posted" });
       setDrafts((prev) => prev.map((d) => (d._id === id ? data.draft : d)));
     } catch {
-      // leave draft unchanged, user can retry
+      showToast("Couldn't update that draft — try again.", { type: "error" });
     } finally {
       setUpdatingId(null);
     }
@@ -319,8 +353,8 @@ selectedPlatforms.includes(p)
             <input
               type="search"
               placeholder="Search your content…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="field-input w-56"
             />
           </div>

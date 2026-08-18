@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
+import { getSocket } from "../services/socket";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -58,6 +59,22 @@ const WeeklyPlanner = () => {
 
   useEffect(() => {
     void Promise.resolve().then(loadPlanner);
+  }, [loadPlanner]);
+
+  // Live sync with other tabs — e.g. marking a post "posted" in Content Studio updates
+  // this page's board without a manual refresh.
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const onDraftChange = () => loadPlanner();
+    socket.on("draft:created", onDraftChange);
+    socket.on("draft:statusChanged", onDraftChange);
+
+    return () => {
+      socket.off("draft:created", onDraftChange);
+      socket.off("draft:statusChanged", onDraftChange);
+    };
   }, [loadPlanner]);
 
   const handleSchedule = async (draftId, dateValue) => {

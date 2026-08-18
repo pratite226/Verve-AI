@@ -1,0 +1,77 @@
+// Billing/subscriptions live in Postgres (relational, transactional) while the rest of the
+// app stays on MongoDB (document-shaped, evolves per-feature). See HLD.md "Tech Stack" for
+// why this feature specifically warranted a second datastore instead of migrating everything.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Plans are seeded, not user-created — see prisma/seed.js.
+model Plan {
+  id            Int            @id @default(autoincrement())
+  name          String         @unique
+  priceCents    Int
+  interval      BillingInterval
+  features      Json           @default("[]")
+  createdAt     DateTime       @default(now())
+  subscriptions Subscription[]
+}
+
+// mongoUserId is a string reference into MongoDB's Users collection (no cross-database FK
+// is possible, so this is enforced at the application layer instead of by the DB) —
+// everything downstream of it (planId -> Plan, Invoice -> Subscription) is a real FK.
+model Subscription {
+  id                   Int                @id @default(autoincrement())
+  mongoUserId          String
+  planId               Int
+  plan                 Plan               @relation(fields: [planId], references: [id])
+  status               SubscriptionStatus @default(trialing)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?            @unique
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  invoices             Invoice[]
+
+  @@index([mongoUserId])
+  @@index([status])
+}
+
+// amountCents is intentionally stored here rather than derived by joining Plan.priceCents —
+// a plan's price can change after an invoice was already issued, so this is a point-in-time
+// billed fact, not a denormalization of Plan.
+model Invoice {
+  id              Int           @id @default(autoincrement())
+  subscriptionId  Int
+  subscription    Subscription  @relation(fields: [subscriptionId], references: [id])
+  amountCents     Int
+  status          InvoiceStatus @default(open)
+  stripeInvoiceId String?       @unique
+  issuedAt        DateTime      @default(now())
+
+  @@index([subscriptionId])
+  @@index([issuedAt])
+}
+
+enum BillingInterval {
+  monthly
+  yearly
+}
+
+enum SubscriptionStatus {
+  trialing
+  active
+  past_due
+  canceled
+}
+
+enum InvoiceStatus {
+  open
+  paid
+  void
+}

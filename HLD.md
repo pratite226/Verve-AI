@@ -40,7 +40,11 @@ flowchart LR
 | State | React Context (`AuthContext`) + local component state | App state is shallow (auth session + per-page data fetches) — no need for a global store |
 | Backend | Node.js + Express | Simple REST surface, matches the team's existing JS skillset end-to-end |
 | Database | MongoDB (Atlas) via Mongoose | Brand briefs / drafts / notes are naturally document-shaped and evolve per-feature (e.g. `pillarWeights` added later without a migration) |
+| Billing database | PostgreSQL via Prisma | Billing/subscriptions are inherently relational (plans, subscriptions, invoices with real FKs and transactional writes) — a deliberate second datastore for just this slice rather than forcing a relational domain into documents; see LLD.md §1a |
+| Cache | Redis (`ioredis`) | Optional — caches hot per-user reads (content list, analytics overview); the app runs correctly without it, just uncached |
+| Real-time | Socket.IO | JWT-authenticated, keeps multiple open tabs for the same account in sync on draft/billing changes |
 | Auth | JWT (`jsonwebtoken`) + `bcrypt` password hashing | Stateless auth, no session store needed |
+| Payments | Stripe (Checkout + webhooks) | Test-mode subscription checkout for the billing feature |
 | AI | Google Gemini (`@google/genai`, `gemini-3.1-flash-lite`) | Fast, cheap model sufficient for short-form content generation; JSON-mode-style prompting used for structured outputs |
 
 ## 3. Major Modules
@@ -117,8 +121,39 @@ sequenceDiagram
 
 ## 6. Deployment Model (current)
 
-Local development only at this stage: Vite dev server for the client, `node server.js` for the
-API, connecting to a MongoDB Atlas cluster over the internet. Environment variables
-(`MONGO_URI`, `JWT_SECRET`, `GEMINI_API_KEY`, `PORT`) are loaded from a root `.env` file via
-`dotenv`. No CI/CD or hosting is configured yet — the client (`vite build`) and server are
-deploy-ready as static assets + a Node process respectively, but that wiring is future work.
+Day-to-day development is unchanged: Vite dev server for the client (`npm run dev`,
+`localhost:5173`), `node server.js` for the API (`localhost:5000`), MongoDB Atlas over the
+internet. Environment variables come from a root `.env` (see `.env.example`); the server
+fails fast on boot if a required one is missing (`server/utils/validateEnv.js`).
+
+Three deploy-ready modes now exist, all using the same code:
+
+1. **Separate static frontend + API** (the intended default): client built with `npm run
+   build` and hosted as static files (`client/brandai/vercel.json` handles the SPA rewrite
+   for Vercel-style hosts); server runs as its own Node process/container. This is what
+   `docker-compose.yml`'s `client` (nginx-served static build) and `server` services model.
+2. **Single-process monolith**: if the client is built *and* colocated with the server
+   (`npm run build:all` in `client/brandai`, producing `dist/` + `dist-ssr/`), `server.js`
+   also serves the client — `GET /` is server-rendered (see §5's SSR note below), every other
+   non-`/api`/`/uploads` path falls back to `index.html` for client-side routing, and static
+   assets are served directly. This mode is **not** what `docker-compose.yml` runs (its
+   `client`/`server` containers are still separate, so SSR doesn't activate there) — it's
+   available for a single-service host (Render/Railway-style) that only wants one process.
+3. **Docker Compose** (`docker-compose.yml`): `mongo`, `postgres`, `redis`, `server`
+   (`server/Dockerfile`, multi-stage — devDependencies only used to run `prisma generate` at
+   build time), and `client` (`client/brandai/Dockerfile`, multi-stage — `vite build` served
+   by nginx with an SPA rewrite, `nginx.conf`) all wired together for local parity with a
+   real deployment.
+
+CI (`.github/workflows/ci.yml`) lints + builds the client and boot-checks the server
+(`GET /api/health`, which deliberately doesn't touch Mongo/Postgres) on every push/PR to
+`main`. Actually provisioning hosting (a Vercel/Render project, DNS, production secrets) is a
+one-time account-level setup this repo doesn't and can't do on its own — the pieces above are
+what make that setup a config step rather than an app-restructuring one.
+
+**Server-side rendering** (`client/brandai/src/entry-server.jsx`) is intentionally scoped to
+the static Landing page only — it has no data fetching, so there's nothing async to coordinate
+server-side. `main.jsx` uses `hydrateRoot` when the root element already has server-rendered
+children (true only for that SSR'd `/` response) and `createRoot` otherwise, so the same
+client bundle handles both cases. This is not a framework-wide SSR migration — every other
+route stays purely client-rendered, same as today.
