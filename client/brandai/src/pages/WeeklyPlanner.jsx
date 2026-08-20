@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import api from "../services/api";
 import { getSocket } from "../services/socket";
+import { coalesceMicrotask } from "../utils/async";
+import AppShell from "../components/AppShell.jsx";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -61,13 +62,13 @@ const WeeklyPlanner = () => {
     void Promise.resolve().then(loadPlanner);
   }, [loadPlanner]);
 
-  // Live sync with other tabs — e.g. marking a post "posted" in Content Studio updates
-  // this page's board without a manual refresh.
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
 
-    const onDraftChange = () => loadPlanner();
+    // generateWeeklyPlanContent (contentController.js) emits one "draft:created" per day it
+    // plans — coalesced to a single reload instead of one per event, see coalesceMicrotask.
+    const onDraftChange = coalesceMicrotask(loadPlanner);
     socket.on("draft:created", onDraftChange);
     socket.on("draft:statusChanged", onDraftChange);
 
@@ -134,106 +135,102 @@ const WeeklyPlanner = () => {
     });
 
   return (
-    <div className="min-h-screen bg-paper">
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-8">
-        <Link to="/dashboard" className="font-display text-lg">BrandPilot</Link>
-        <nav className="flex items-center gap-6">
-          <Link to="/dashboard" className="font-mono text-xs uppercase tracking-widest text-muted hover:text-ink">
-            Dashboard
-          </Link>
-          <Link to="/content-studio" className="font-mono text-xs uppercase tracking-widest text-muted hover:text-ink">
-            Content Studio
-          </Link>
-        </nav>
-      </header>
-
-      <main className="mx-auto max-w-5xl px-6 pb-24">
-        <p className="byline">Weekly Planner</p>
-        <div className="mt-4 flex items-center justify-between">
-          <h1 className="font-display text-4xl">
+    <AppShell>
+      <div className="px-12 pb-24 pt-11">
+        <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted">Weekly Planner</div>
+        <div className="mt-4 flex flex-wrap items-end justify-between gap-5">
+          <h1
+            className="m-0 font-display font-extrabold tracking-[-0.04em]"
+            style={{ fontSize: "clamp(38px,4.6vw,72px)", lineHeight: 0.92 }}
+          >
             {formatDayHeader(weekDays[0])} – {formatDayHeader(weekDays[6])}
           </h1>
           <div className="flex gap-2">
             <button onClick={goPrevWeek} className="btn-secondary">← Prev</button>
             <button onClick={goNextWeek} className="btn-secondary">Next →</button>
+            <button
+              type="button"
+              onClick={handlePlanWeek}
+              disabled={planning}
+              data-magnetic
+              className="btn-primary disabled:opacity-50"
+            >
+              {planning && <span className="spinner" aria-hidden="true" />}
+              {planning ? "Planning…" : "Plan this week with AI"}
+            </button>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handlePlanWeek}
-          disabled={planning}
-          className="btn-primary mt-6 disabled:opacity-50"
-        >
-          {planning && <span className="spinner" aria-hidden="true" />}
-          {planning ? "Planning…" : "Plan this week with AI"}
-        </button>
-
-        {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
+        {error && <p className="mt-4 text-sm" style={{ color: "#FF7A55" }}>{error}</p>}
         {loading && <p className="mt-8 text-sm text-muted">Loading planner…</p>}
 
         {!loading && (
           <>
-            {/* Week grid */}
-            <div className="mt-10 grid grid-cols-1 gap-4 border-t border-line pt-8 sm:grid-cols-7">
-              {weekDays.map((day, i) => (
-                <div
-                  key={i}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDragOverDay(i);
-                  }}
-                  onDragLeave={() => setDragOverDay((d) => (d === i ? null : d))}
-                  onDrop={(e) => handleDrop(day, e)}
-                  className={`border border-line p-3 transition-colors duration-150 ${
-                    dragOverDay === i ? "bg-paper-raised border-cobalt" : ""
-                  }`}
-                >
-                  <p className="field-label">{DAY_LABELS[i]}</p>
-                  <p className="mt-1 font-display text-lg">{formatDayHeader(day)}</p>
-                  <div className="mt-3 space-y-2">
-                    {draftsForDay(day).length === 0 && (
-                      <p className="text-xs text-muted">Nothing scheduled</p>
-                    )}
-                    {draftsForDay(day).map((draft) => (
-                      <div
-                        key={draft._id}
-                        draggable
-                        onDragStart={(e) => e.dataTransfer.setData("text/plain", draft._id)}
-                        className="cursor-grab border border-line bg-paper p-2 active:cursor-grabbing"
-                      >
-                        <p className="font-mono text-[10px] uppercase tracking-widest text-cobalt">
-                          {draft.platform}
-                        </p>
-                        <p className="mt-1 line-clamp-3 text-xs text-ink/80">{draft.content}</p>
-                      </div>
-                    ))}
+            <div className="mt-9 grid grid-cols-1 gap-px overflow-hidden rounded border border-line bg-line sm:grid-cols-7">
+              {weekDays.map((day, i) => {
+                const isToday = i === 1;
+                return (
+                  <div
+                    key={i}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragOverDay(i);
+                    }}
+                    onDragLeave={() => setDragOverDay((d) => (d === i ? null : d))}
+                    onDrop={(e) => handleDrop(day, e)}
+                    className="min-h-[230px] px-3.5 py-4 transition-colors duration-150"
+                    style={{ background: dragOverDay === i ? "var(--color-paper-raised)" : isToday ? "#0E0E11" : "var(--color-paper-raised)" }}
+                  >
+                    <div className="flex items-baseline justify-between">
+                      <span className="font-mono text-[10px] uppercase tracking-[0.2em]" style={{ color: isToday ? "var(--color-cobalt)" : "var(--color-muted)" }}>
+                        {DAY_LABELS[i]}
+                      </span>
+                      <span className="text-[19px] font-bold tracking-[-0.02em]" style={{ color: isToday ? "var(--color-ink)" : "#8A867E" }}>
+                        {formatDayHeader(day).split(" ")[1]}
+                      </span>
+                    </div>
+                    <div className="mt-3.5 flex flex-col gap-2">
+                      {draftsForDay(day).length === 0 && <p className="text-xs" style={{ color: "#3A3A3E" }}>Nothing scheduled</p>}
+                      {draftsForDay(day).map((draft) => (
+                        <div
+                          key={draft._id}
+                          draggable
+                          onDragStart={(e) => e.dataTransfer.setData("text/plain", draft._id)}
+                          className="cursor-grab rounded-[2px] border p-2.5 active:cursor-grabbing"
+                          style={{ borderColor: "#23231F", background: "#101210", borderLeft: "2px solid var(--color-cobalt)" }}
+                        >
+                          <div className="font-mono text-[9px] uppercase tracking-[0.18em]" style={{ color: "var(--color-cobalt)" }}>
+                            {draft.platform}
+                          </div>
+                          <p className="mt-1.5 line-clamp-3 text-xs" style={{ color: "#A5A199" }}>{draft.content}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-            {/* Unscheduled drafts pool */}
-            <div className="mt-16 border-t border-line pt-10">
-              <p className="field-label">Unscheduled drafts</p>
+            <div className="mt-12">
+              <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">Unscheduled drafts</span>
               {unscheduledDrafts.length === 0 && (
                 <p className="mt-4 text-sm text-muted">
                   Nothing to schedule — generate some posts in Content Studio first.
                 </p>
               )}
-              <div className="mt-4 space-y-3">
+              <div className="mt-4 flex flex-col gap-2.5">
                 {unscheduledDrafts.map((draft) => (
                   <div
                     key={draft._id}
                     draggable
                     onDragStart={(e) => e.dataTransfer.setData("text/plain", draft._id)}
-                    className="flex cursor-grab items-center justify-between border border-line p-4 active:cursor-grabbing"
+                    className="flex cursor-grab items-center justify-between gap-6 rounded border border-line bg-paper-raised px-[22px] py-[18px] transition-colors duration-150 active:cursor-grabbing hover:border-[var(--color-cobalt)]"
                   >
                     <div className="min-w-0 flex-1 pr-4">
-                      <span className="font-mono text-xs uppercase tracking-widest text-cobalt">
+                      <span className="font-mono text-[10px] uppercase tracking-[0.2em]" style={{ color: "var(--color-cobalt)" }}>
                         {draft.platform}
                       </span>
-                      <p className="mt-1 truncate text-sm text-ink/80">{draft.content}</p>
+                      <p className="mt-1.5 truncate text-sm" style={{ color: "#A5A199" }}>{draft.content}</p>
                     </div>
                     <input
                       type="date"
@@ -247,8 +244,8 @@ const WeeklyPlanner = () => {
             </div>
           </>
         )}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 };
 

@@ -146,6 +146,7 @@ const generateMultiPlatform = async (req, res) => {
         recordDraftEvent(req.user._id, { platform, status: "draft", isNew: true }).catch((err) =>
           console.error("analytics recordDraftEvent failed:", err.message)
         );
+        emitToUser(req.user._id, "draft:created", draft);
         drafts.push(draft);
       } else {
         failures.push({ platform, error: result.reason.message });
@@ -361,6 +362,7 @@ const generateWeeklyPlanContent = async (req, res) => {
             status: "scheduled",
             isNew: true,
           }).catch((err) => console.error("analytics recordDraftEvent failed:", err.message));
+          emitToUser(req.user._id, "draft:created", draft);
 
           return draft;
         })

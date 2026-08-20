@@ -89,7 +89,7 @@ versa).
 ### Analytics — `/api/analytics`
 | Method | Path | Body | Returns |
 |---|---|---|---|
-| GET | `/overview` | — | `{ success, byPlatform, byPillar, byStatus, recentSnapshots }` — `byPlatform`/`byPillar`/`byStatus` come from a single `$facet` aggregation pipeline over `ContentDraft`; `recentSnapshots` is the last 30 entries of the caller's `Analytics.dailySnapshots` |
+| GET | `/overview` | — | `{ success, byPlatform, byPillar, byStatus, recentSnapshots, profileContext }` — `byPlatform`/`byPillar`/`byStatus` come from a single `$facet` aggregation pipeline over `ContentDraft`; `recentSnapshots` is the last 30 entries of the caller's `Analytics.dailySnapshots`; `profileContext` (`{ name, industry }`) comes from `.populate("userId", "name industry")` on the `Analytics` document — see §1's embedding-vs-referencing note |
 
 All routes below except `POST /api/auth/signup` and `POST /api/auth/login` require
 `Authorization: Bearer <JWT>` (enforced by `authMiddleware.protect`).
@@ -266,18 +266,26 @@ client/brandai/src/
 
 ## 7. Frontend JS notes
 
-- **Hoisting**: the codebase uses `const`/`let` exclusively (no `var`) and defines functions
-  as `const fn = () => {}` rather than `function fn() {}` — both sidestep hoisting's more
-  surprising behaviors (`var`'s hoist-to-`undefined`, function-declaration hoisting letting a
-  function be called above where it's defined in the file). This is a deliberate style
-  choice, not something with its own runtime feature to point to.
-- **Closures**: `debounce` (`client/brandai/src/utils/async.js`) and the toast auto-dismiss
-  timers (`client/brandai/src/hooks/useToast.jsx`) both rely on values captured in an
-  enclosing scope persisting across calls — see the inline comments in those two files for the
-  specific mechanism in each.
-- **Event loop**: `useToast`'s `setTimeout`-based auto-dismiss is a macrotask, scheduled to run
-  after the current call stack (and any pending microtasks/state updates) finish — see the
-  comment at the top of `useToast.jsx`.
+- **Hoisting**: elsewhere the codebase uses `const`/`let` exclusively (no `var`) and defines
+  functions as `const fn = () => {}` rather than `function fn() {}`, sidestepping hoisting's
+  more surprising failure modes. The one deliberate exception is
+  `client/brandai/src/utils/async.js`'s `retryWithBackoff`/`attempt` pair: `retryWithBackoff`
+  (the public entry point, defined first) calls `attempt` (the recursive retry loop, defined
+  below it) — legal only because `function` declarations hoist their full body, not just the
+  binding. See the comment above `attempt` for why that ordering (entry point before its
+  helper) is the actual reason to lean on hoisting instead of avoiding it.
+- **Closures**: `debounce`/`coalesceMicrotask` (`client/brandai/src/utils/async.js`) and the
+  toast auto-dismiss timers (`client/brandai/src/hooks/useToast.jsx`) all rely on values
+  captured in an enclosing scope persisting across calls — see the inline comments in those
+  files for the specific mechanism in each.
+- **Event loop**: two real mechanisms, one per task type. `useToast`'s `setTimeout`-based
+  auto-dismiss is a **macrotask**, scheduled to run after the current call stack (and any
+  pending microtasks/state updates) finish — see the comment at the top of `useToast.jsx`.
+  `coalesceMicrotask` (`utils/async.js`), used by `ContentStudio.jsx`/`WeeklyPlanner.jsx`'s
+  socket listeners, defers via `queueMicrotask` — a **microtask**, which the event loop drains
+  completely before the next macrotask — so a burst of `draft:created` events emitted
+  back-to-back by `generateMultiPlatform`/`generateWeeklyPlanContent`
+  (`contentController.js`) collapses into a single re-fetch instead of one per event.
 - **Promises vs. callbacks / async-await**: `utils/async.js`'s `readFileAsDataURL` wraps
   `FileReader`'s callback-based API (`onload`/`onerror`) in a `Promise`, so the Canvas image
   upload flow (`Canvas.jsx`) can `await` it the same way it awaits the axios upload call right

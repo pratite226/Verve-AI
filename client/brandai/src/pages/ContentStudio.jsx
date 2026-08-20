@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import api from "../services/api";
-import { debounce } from "../utils/async";
+import { debounce, coalesceMicrotask } from "../utils/async";
 import { useToast } from "../hooks/useToast.jsx";
 import { getSocket } from "../services/socket";
+import AppShell from "../components/AppShell.jsx";
 
 const PLATFORMS = ["linkedin", "instagram", "twitter"];
 const TONES = ["Professional", "Casual", "Bold", "Educational", "Storytelling", "Inspirational", "Funny", "Gen-Z"];
@@ -27,6 +27,12 @@ const STATUS_FILTERS = [
   { value: "scheduled", label: "Planned" },
   { value: "posted", label: "Published" },
 ];
+
+const STATUS_COLORS = {
+  posted: { color: "var(--color-cobalt)", border: "#3A4520" },
+  scheduled: { color: "#A5A199", border: "var(--color-line)" },
+  draft: { color: "var(--color-muted)", border: "var(--color-line)" },
+};
 
 const ContentStudio = () => {
   const [brief, setBrief] = useState(null);
@@ -55,11 +61,6 @@ const ContentStudio = () => {
   const [search, setSearch] = useState("");
   const { showToast } = useToast();
 
-  // searchInput updates the text box instantly; the debounced setter only commits to
-  // `search` (which actually drives filtering) 300ms after typing pauses — avoids
-  // re-filtering the list on every keystroke. useRef so the debounced function (and its
-  // closed-over timer) is created once, not recreated — and re-debounced from scratch —
-  // on every render.
   const debouncedSetSearch = useRef(debounce(setSearch, 300)).current;
 
   const handleSearchChange = (value) => {
@@ -82,14 +83,11 @@ const ContentStudio = () => {
     loadDrafts();
   }, []);
 
-  // Keeps this page's draft list in sync if a draft is created/updated from another open
-  // tab (or, later, the weekly planner) for the same account — without this, you'd only
-  // see it after a manual refresh.
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
 
-    const onDraftChange = () => loadDrafts();
+    const onDraftChange = coalesceMicrotask(loadDrafts);
     socket.on("draft:created", onDraftChange);
     socket.on("draft:statusChanged", onDraftChange);
 
@@ -201,155 +199,134 @@ const ContentStudio = () => {
   }, [drafts, platformFilter, statusFilter, search]);
 
   return (
-    <div className="min-h-screen bg-paper">
-      <header className="mx-auto flex max-w-4xl items-center justify-between px-6 py-8">
-        <Link to="/dashboard" className="font-display text-lg">BrandPilot</Link>
-        <nav className="flex items-center gap-6">
-          <Link to="/dashboard" className="font-mono text-xs uppercase tracking-widest text-muted hover:text-ink">
-            Dashboard
-          </Link>
-          <Link to="/planner" className="font-mono text-xs uppercase tracking-widest text-muted hover:text-ink">
-            Planner
-          </Link>
-        </nav>
-      </header>
+    <AppShell>
+      <div className="px-12 pb-24 pt-11">
+        <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted">Content Studio</div>
+        <h1
+          className="mt-4 font-display font-extrabold tracking-[-0.04em]"
+          style={{ fontSize: "clamp(40px,5vw,80px)", lineHeight: 0.92 }}
+        >
+          Generate content
+        </h1>
 
-      <main className="mx-auto max-w-4xl px-6 pb-24">
-        <p className="byline">Content Studio</p>
-        <h1 className="mt-4 font-display text-4xl">Generate content</h1>
-
-        <div className="mt-10 border-t border-line pt-8">
-          <div className="flex items-center justify-between">
-            <p className="field-label">Need a topic?</p>
-            <button
-              type="button"
-              onClick={handleGetIdeas}
-              disabled={ideasLoading}
-              className="btn-secondary disabled:opacity-50"
-            >
+        <div className="mt-11 rounded border border-line bg-paper-raised p-8">
+          <div className="flex items-center justify-between gap-5">
+            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">Need a topic?</span>
+            <button type="button" onClick={handleGetIdeas} disabled={ideasLoading} className="btn-secondary disabled:opacity-50">
               {ideasLoading ? "Thinking…" : ideas.length > 0 ? "Generate more" : "Get ideas"}
             </button>
           </div>
           {ideas.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-[18px] flex flex-wrap gap-2">
               {ideas.map((idea, i) => (
                 <button
                   key={i}
                   type="button"
                   onClick={() => setTopic(idea)}
-                  className="border border-line px-3 py-1.5 text-left text-sm hover:border-ink"
+                  className="rounded-full border border-line px-3.5 py-2.5 text-left text-[13px] transition-colors duration-150 hover:border-[var(--color-cobalt)]"
+                  style={{ background: "var(--color-paper)", color: "#A5A199" }}
                 >
                   {idea}
                 </button>
               ))}
             </div>
           )}
-        </div>
 
-        <div className="mt-10 border-t border-line pt-8">
-          <label className="field-label">Topic</label>
-          <textarea
-            rows={2}
-            className="field-input mt-2 resize-none"
-            placeholder="What should this post be about?"
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-          />
+          <div className="mt-7 border-t border-line pt-7">
+            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">Topic</span>
+            <textarea
+              rows={2}
+              className="mt-2.5 w-full resize-none border-none bg-transparent py-2 text-[19px] tracking-[-0.01em] outline-none"
+              style={{ borderBottom: "1px solid var(--color-line)" }}
+              placeholder="What should this post be about?"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+            />
 
-          <div className="mt-6">
-            <p className="field-label">Platforms</p>
-            <div className="mt-2 flex gap-2">
-              {PLATFORMS.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => togglePlatform(p)}
-                  className={`rounded-md border px-4 py-2 font-mono text-xs uppercase tracking-widest transition-all duration-200 ${
-selectedPlatforms.includes(p)
-? "bg-black text-white border-black"
-: "bg-white text-gray-700 border-gray-300 hover:border-black"
-}`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-6 sm:grid-cols-2">
-            <div>
-              <label className="field-label" htmlFor="tone">Tone (optional)</label>
-              <select
-                id="tone"
-                className="field-input mt-2"
-                value={tone}
-                onChange={(e) => setTone(e.target.value)}
-              >
-                <option value="">Use brand default</option>
-                {TONES.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="field-label" htmlFor="length">Length</label>
-              <select
-                id="length"
-                className="field-input mt-2"
-                value={length}
-                onChange={(e) => setLength(e.target.value)}
-              >
-                {LENGTHS.map((l) => (
-                  <option key={l.value} value={l.value}>{l.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {brief?.contentPillars?.length > 0 && (
-            <div className="mt-6">
-              <p className="field-label">Content pillar (optional)</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSelectedPillar("")}
-                  className={`border px-3 py-1.5 text-xs ${
-                    selectedPillar === "" ? "border-ink bg-ink text-paper" : "border-line text-ink/70"
-                  }`}
-                >
-                  None
-                </button>
-                {brief.contentPillars.map((pillar) => (
-                  <button
-                    key={pillar}
-                    type="button"
-                    onClick={() => setSelectedPillar(pillar)}
-                    className={`border px-3 py-1.5 text-xs ${
-                      selectedPillar === pillar ? "border-ink bg-ink text-paper" : "border-line text-ink/70"
-                    }`}
-                  >
-                    {pillar}
-                  </button>
-                ))}
+            <div className="mt-7 grid gap-8 sm:grid-cols-2">
+              <div>
+                <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">Platforms</span>
+                <div className="mt-3 flex gap-2">
+                  {PLATFORMS.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => togglePlatform(p)}
+                      className={`chip capitalize ${selectedPlatforms.includes(p) ? "chip-active" : ""}`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-5">
+                <div>
+                  <label className="field-label" htmlFor="tone">Tone (optional)</label>
+                  <select id="tone" className="field-input mt-2.5" value={tone} onChange={(e) => setTone(e.target.value)}>
+                    <option value="">Use brand default</option>
+                    {TONES.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="field-label" htmlFor="length">Length</label>
+                  <select id="length" className="field-input mt-2.5" value={length} onChange={(e) => setLength(e.target.value)}>
+                    {LENGTHS.map((l) => (
+                      <option key={l.value} value={l.value}>{l.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
-          )}
 
-          {generateError && <p className="mt-4 text-sm text-red-700">{generateError}</p>}
+            {brief?.contentPillars?.length > 0 && (
+              <div className="mt-7">
+                <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">Content pillar (optional)</span>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPillar("")}
+                    className={`chip ${selectedPillar === "" ? "chip-active" : ""}`}
+                  >
+                    None
+                  </button>
+                  {brief.contentPillars.map((pillar) => (
+                    <button
+                      key={pillar}
+                      type="button"
+                      onClick={() => setSelectedPillar(pillar)}
+                      className={`chip ${selectedPillar === pillar ? "chip-active" : ""}`}
+                    >
+                      {pillar}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={generating || !topic || selectedPlatforms.length === 0}
-            className="btn-primary mt-6 disabled:opacity-40"
-          >
-            {generating ? "Generating…" : `Generate ${selectedPlatforms.length > 1 ? "posts" : "post"}`}
-          </button>
+            {generateError && (
+              <div className="mt-6 rounded-sm border px-4 py-3.5 text-sm" style={{ borderColor: "#4A1F16", background: "#1A0C08", color: "#FF7A55" }}>
+                {generateError}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={generating || !topic || selectedPlatforms.length === 0}
+              data-magnetic
+              className="btn-primary mt-7 disabled:opacity-40"
+            >
+              {generating && <span className="spinner" aria-hidden="true" />}
+              {generating ? "Generating…" : `Generate ${selectedPlatforms.length > 1 ? "posts" : "post"}`}
+            </button>
+          </div>
         </div>
 
-        <div className="mt-16 border-t border-line pt-10">
+        <div className="mt-14">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <p className="field-label">Your drafts</p>
+            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">Your drafts</span>
             <input
               type="search"
               placeholder="Search your content…"
@@ -359,16 +336,14 @@ selectedPlatforms.includes(p)
             />
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-4">
+          <div className="mt-[18px] flex flex-wrap items-center gap-4">
             <div className="flex flex-wrap gap-2">
               {["all", ...PLATFORMS].map((p) => (
                 <button
                   key={p}
                   type="button"
                   onClick={() => setPlatformFilter(p)}
-                  className={`border px-3 py-1 font-mono text-xs uppercase tracking-widest ${
-                    platformFilter === p ? "border-ink bg-ink text-paper" : "border-line text-ink/70"
-                  }`}
+                  className={`chip capitalize ${platformFilter === p ? "chip-active" : ""}`}
                 >
                   {p === "all" ? "All" : p}
                 </button>
@@ -380,9 +355,7 @@ selectedPlatforms.includes(p)
                   key={s.value}
                   type="button"
                   onClick={() => setStatusFilter(s.value)}
-                  className={`border px-3 py-1 font-mono text-xs uppercase tracking-widest ${
-                    statusFilter === s.value ? "border-cobalt text-cobalt" : "border-line text-ink/70"
-                  }`}
+                  className={`chip ${statusFilter === s.value ? "chip-active" : ""}`}
                 >
                   {s.label}
                 </button>
@@ -393,77 +366,86 @@ selectedPlatforms.includes(p)
           {draftsLoading && <p className="mt-4 text-sm text-muted">Loading drafts…</p>}
 
           {!draftsLoading && filteredDrafts.length === 0 && (
-            <p className="mt-4 text-sm text-muted">
-              {drafts.length === 0 ? "No drafts yet — generate your first post above." : "No drafts match your filters."}
-            </p>
+            <div className="mt-[22px] rounded border border-dashed px-10 py-16 text-center" style={{ borderColor: "var(--color-line)" }}>
+              <p className="m-0 text-[15px] text-[#8A867E]">
+                {drafts.length === 0 ? "No drafts yet — generate your first post above." : "No drafts match your filters."}
+              </p>
+            </div>
           )}
 
-          <div className="mt-4 space-y-4">
-            {filteredDrafts.map((draft) => (
-              <div key={draft._id} className="border border-line p-5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs uppercase tracking-widest text-cobalt">
-                      {draft.platform}
+          <div className="mt-[22px] flex flex-col gap-3">
+            {filteredDrafts.map((draft) => {
+              const sc = STATUS_COLORS[draft.status] || STATUS_COLORS.draft;
+              return (
+                <div key={draft._id} className="rounded border border-line bg-paper-raised px-[26px] py-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2.5 font-mono text-[10px] uppercase tracking-[0.2em]">
+                      <span style={{ color: "var(--color-cobalt)" }}>{draft.platform}</span>
+                      {draft.pillar && (
+                        <>
+                          <span style={{ color: "#3A3A3E" }}>/</span>
+                          <span className="text-muted">{draft.pillar}</span>
+                        </>
+                      )}
+                    </div>
+                    <span
+                      className="rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em]"
+                      style={{ color: sc.color, borderColor: sc.border }}
+                    >
+                      {draft.status}
                     </span>
-                    {draft.pillar && (
-                      <span className="font-mono text-xs uppercase tracking-widest text-muted">
-                        · {draft.pillar}
-                      </span>
-                    )}
                   </div>
-                  <span className="font-mono text-xs uppercase tracking-widest text-muted">
-                    {draft.status}
-                  </span>
-                </div>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-ink/90">
-                  {draft.content}
-                </p>
-                <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(draft._id, draft.content)}
-                    className="font-mono text-xs uppercase tracking-widest text-cobalt hover:underline"
-                  >
-                    {copiedId === draft._id ? "Copied!" : "Copy"}
-                  </button>
-                  {draft.status === "scheduled" && (
+                  <p className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed" style={{ color: "#CFCCC5" }}>
+                    {draft.content}
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
                     <button
                       type="button"
-                      onClick={() => handleMarkPosted(draft._id)}
-                      disabled={updatingId === draft._id}
-                      className="font-mono text-xs uppercase tracking-widest text-cobalt hover:underline disabled:opacity-50"
+                      onClick={() => handleCopy(draft._id, draft.content)}
+                      className="font-mono text-xs uppercase tracking-widest hover:underline"
+                      style={{ color: "var(--color-cobalt)" }}
                     >
-                      {updatingId === draft._id ? "Marking…" : "Mark as posted"}
+                      {copiedId === draft._id ? "Copied!" : "Copy"}
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(draft._id)}
-                    className="font-mono text-xs uppercase tracking-widest text-muted hover:text-red-700"
-                  >
-                    Delete
-                  </button>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">
-                  {REFINE_ACTIONS.map(({ action, label }) => (
+                    {draft.status === "scheduled" && (
+                      <button
+                        type="button"
+                        onClick={() => handleMarkPosted(draft._id)}
+                        disabled={updatingId === draft._id}
+                        className="font-mono text-xs uppercase tracking-widest hover:underline disabled:opacity-50"
+                        style={{ color: "var(--color-cobalt)" }}
+                      >
+                        {updatingId === draft._id ? "Marking…" : "Mark as posted"}
+                      </button>
+                    )}
                     <button
-                      key={action}
                       type="button"
-                      onClick={() => handleRefine(draft._id, action)}
-                      disabled={refiningId === draft._id}
-                      className="border border-line px-2.5 py-1 text-xs text-ink/70 hover:border-ink hover:text-ink disabled:opacity-40"
+                      onClick={() => handleDelete(draft._id)}
+                      className="font-mono text-xs uppercase tracking-widest text-muted hover:text-red-400"
                     >
-                      {refiningId === draft._id ? "…" : label}
+                      Delete
                     </button>
-                  ))}
+                  </div>
+                  <div className="mt-3.5 flex flex-wrap gap-2 border-t border-line pt-4.5">
+                    {REFINE_ACTIONS.map(({ action, label }) => (
+                      <button
+                        key={action}
+                        type="button"
+                        onClick={() => handleRefine(draft._id, action)}
+                        disabled={refiningId === draft._id}
+                        className="rounded-full border border-line px-3.5 py-2 text-xs text-[#8A867E] transition-colors duration-150 hover:border-[var(--color-cobalt)] hover:text-[var(--color-cobalt)] disabled:opacity-40"
+                      >
+                        {refiningId === draft._id ? "…" : label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 };
 

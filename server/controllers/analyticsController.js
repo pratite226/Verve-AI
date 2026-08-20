@@ -42,8 +42,14 @@ const getOverview = async (req, res) => {
       },
     ]);
 
-    const analytics = await Analytics.findOne({ userId });
+    // .populate("userId", ...) is the referencing side of the model's embedding-vs-referencing
+    // split (see the comment in models/Analytics.js): dailySnapshots is embedded and always
+    // comes back for free with the document above, but userId is a stored ObjectId that has
+    // to be explicitly dereferenced against the User collection to pull profile fields —
+    // that's the whole distinction between the two relationship types in practice.
+    const analytics = await Analytics.findOne({ userId }).populate("userId", "name industry");
     const recentSnapshots = (analytics?.dailySnapshots || []).slice(-30);
+    const owner = analytics?.userId || req.user;
 
     const payload = {
       success: true,
@@ -51,6 +57,7 @@ const getOverview = async (req, res) => {
       byPillar: result?.byPillar || [],
       byStatus: result?.byStatus || [],
       recentSnapshots,
+      profileContext: { name: owner.name, industry: owner.industry || "" },
     };
 
     await cacheSet(cacheKey, payload, OVERVIEW_TTL_SECONDS);

@@ -37,6 +37,16 @@ const QUIZ_QUESTIONS = [
   },
 ];
 
+const STEP_INFO = {
+  1: ["Basics", "Let's start with\nthe basics", "Four quick facts. The AI needs a shape before it can find your voice."],
+  2: ["Your voice today", "Paste your\nLinkedIn About", "Optional — if you have one, it helps the AI hear how you already sound."],
+  3: ["Substance", "A couple\nmore things", "Specifics beat adjectives. One project and one ambition is enough."],
+  4: ["Positioning quiz", "Quick\npositioning quiz", "Three either/ors. There are no wrong answers, only different brands."],
+  5: ["Generate", "Ready to build\nyour Brand Brief", "Everything you shared, turned into a strategy you can edit."],
+};
+
+const readyTags = ["Positioning", "Tagline", "Tone", "Audience", "Mission", "Pillars"];
+
 const Onboarding = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -55,12 +65,7 @@ const Onboarding = () => {
 
   const [quizAnswers, setQuizAnswers] = useState({});
 
-  const updateForm = (field, value) => {
-  setForm((prev) => ({
-    ...prev,
-    [field]: value,
-  }));
-};
+  const updateForm = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
   const updateQuiz = (key, value) => setQuizAnswers({ ...quizAnswers, [key]: value });
 
   const goNext = () => setStep((s) => Math.min(s + 1, 5));
@@ -99,25 +104,46 @@ const Onboarding = () => {
     return true;
   };
 
+  const [kicker, title, blurb] = STEP_INFO[step];
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-paper px-6 py-16">
-      <div className="w-full max-w-lg">
-        <p className="byline">Step {step} of 5</p>
-        <div className="mt-3 flex gap-1">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <div key={n} className={`h-px flex-1 ${n <= step ? "bg-cobalt" : "bg-line"}`} />
-          ))}
+    <div className="flex min-h-screen flex-col bg-paper">
+      <header className="flex items-center justify-between border-b border-line px-10 py-[22px]">
+        <span className="font-display text-[17px] font-extrabold tracking-tight">BRANDPILOT</span>
+        <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted">Step {step} of 5</span>
+      </header>
+
+      <div className="mt-6 flex gap-1.5 px-10">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <div
+            key={n}
+            className="h-0.5 flex-1"
+            style={{ background: n <= step ? "var(--color-cobalt)" : "#23232A" }}
+          />
+        ))}
+      </div>
+
+      <div className="mx-auto grid w-full max-w-[1440px] flex-1 gap-16 px-10 py-14 sm:grid-cols-2">
+        <div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.22em]" style={{ color: "var(--color-cobalt)" }}>
+            {kicker}
+          </div>
+          <h1
+            className="mt-5 whitespace-pre-line font-display font-extrabold tracking-[-0.04em]"
+            style={{ fontSize: "clamp(38px,4.6vw,74px)", lineHeight: 0.94 }}
+          >
+            {title}
+          </h1>
+          <p className="mt-6 max-w-[420px] text-base leading-relaxed text-muted">{blurb}</p>
         </div>
 
-        {/* STEP 1 — Basic info */}
-        {step === 1 && (
-          <div className="mt-10">
-            <h1 className="font-display text-3xl leading-snug">Let's start with the basics</h1>
-            <div className="mt-8 space-y-6">
+        <div className="w-full max-w-[520px]">
+          {step === 1 && (
+            <div className="flex flex-col gap-7">
               <div>
                 <label className="field-label">What do you do?</label>
                 <input
-                  className="field-input"
+                  className="field-input mt-2"
                   placeholder="e.g. Backend engineer specializing in distributed systems"
                   value={form.role}
                   onChange={(e) => updateForm("role", e.target.value)}
@@ -126,78 +152,58 @@ const Onboarding = () => {
               <div>
                 <label className="field-label">Industry</label>
                 <input
-                  className="field-input"
+                  className="field-input mt-2"
                   placeholder="e.g. Software / SaaS"
                   value={form.industry}
                   onChange={(e) => updateForm("industry", e.target.value)}
                 />
               </div>
               <div>
-  <label className="field-label">Career stage</label>
-
-  <div className="mt-2 flex flex-wrap gap-3">
-    {CAREER_STAGES.map((cs) => (
-      <button
-        key={cs.value}
-        type="button"
-        onClick={() => updateForm("careerStage", cs.value)}
-        className={`rounded-md border px-4 py-2 font-mono text-xs uppercase tracking-widest transition-all duration-200 ${
-          form.careerStage === cs.value
-            ? "bg-black text-white border-black"
-            : "bg-white text-gray-700 border-gray-300 hover:border-black"
-        }`}
-      >
-        {cs.label}
-      </button>
-    ))}
-  </div>
-
-  <p className="mt-2 text-sm text-gray-500">
-    Selected: {form.careerStage || "None"}
-  </p>
-</div>
+                <span className="field-label">Career stage</span>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {CAREER_STAGES.map((cs) => (
+                    <button
+                      key={cs.value}
+                      type="button"
+                      onClick={() => updateForm("careerStage", cs.value)}
+                      className={`chip ${form.careerStage === cs.value ? "chip-active" : ""}`}
+                    >
+                      {cs.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div>
                 <label className="field-label">What's your goal with personal branding?</label>
                 <input
-                  className="field-input"
+                  className="field-input mt-2"
                   placeholder="e.g. Land a senior role in the next 6 months"
                   value={form.goal}
                   onChange={(e) => updateForm("goal", e.target.value)}
                 />
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* STEP 2 — Paste LinkedIn About */}
-        {step === 2 && (
-          <div className="mt-10">
-            <h1 className="font-display text-3xl leading-snug">
-              Paste your current LinkedIn About section
-            </h1>
-            <p className="mt-3 text-sm text-muted">
-              Optional — if you have one, it helps the AI understand your current voice. Skip if not.
-            </p>
+          {step === 2 && (
             <textarea
-              rows={8}
-              className="field-input mt-6 resize-none"
-              placeholder="Paste your headline and About text here..."
+              rows={10}
+              className="w-full resize-none rounded-sm border border-line p-[18px] text-[15px] leading-relaxed outline-none"
+              style={{ background: "var(--color-paper-raised)" }}
+              placeholder="Paste your headline and About text here…"
               value={form.linkedinAbout}
               onChange={(e) => updateForm("linkedinAbout", e.target.value)}
             />
-          </div>
-        )}
+          )}
 
-        {/* STEP 3 — Text prompts */}
-        {step === 3 && (
-          <div className="mt-10">
-            <h1 className="font-display text-3xl leading-snug">A couple more things</h1>
-            <div className="mt-8 space-y-6">
+          {step === 3 && (
+            <div className="flex flex-col gap-7">
               <div>
-                <label className="field-label">Describe a project you're proud of</label>
+                <label className="field-label">A project you're proud of</label>
                 <textarea
-                  rows={3}
-                  className="field-input mt-2 resize-none"
+                  rows={4}
+                  className="mt-2.5 w-full resize-none rounded-sm border border-line p-4 text-[15px] leading-relaxed outline-none"
+                  style={{ background: "var(--color-paper-raised)" }}
                   placeholder="e.g. Led our migration to Kubernetes, cut deploy time by 60%"
                   value={form.proudProject}
                   onChange={(e) => updateForm("proudProject", e.target.value)}
@@ -206,89 +212,104 @@ const Onboarding = () => {
               <div>
                 <label className="field-label">How do you want to be known?</label>
                 <textarea
-                  rows={3}
-                  className="field-input mt-2 resize-none"
+                  rows={4}
+                  className="mt-2.5 w-full resize-none rounded-sm border border-line p-4 text-[15px] leading-relaxed outline-none"
+                  style={{ background: "var(--color-paper-raised)" }}
                   placeholder="e.g. The engineer who makes complex systems feel simple"
                   value={form.wantToBeKnownAs}
                   onChange={(e) => updateForm("wantToBeKnownAs", e.target.value)}
                 />
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* STEP 4 — Positioning quiz */}
-        {step === 4 && (
-          <div className="mt-10">
-            <h1 className="font-display text-3xl leading-snug">Quick positioning quiz</h1>
-            <div className="mt-8 space-y-8">
+          {step === 4 && (
+            <div className="flex flex-col gap-8">
               {QUIZ_QUESTIONS.map((q) => (
                 <div key={q.key}>
-                  <p className="field-label">{q.question}</p>
-              <div className="mt-3 space-y-2">
-  {q.options.map((opt) => (
-    <button
-      key={opt.value}
-      type="button"
-      onClick={() => updateQuiz(q.key, opt.value)}
-      className={`block w-full rounded-md border px-4 py-3 text-left text-sm transition-all duration-200 ${
-        quizAnswers[q.key] === opt.value
-          ? "bg-black text-white border-black"
-          : "bg-white text-gray-700 border-gray-300 hover:border-black"
-      }`}
-    >
-      {opt.label}
-    </button>
-  ))}
-</div>
+                  <div className="field-label">{q.question}</div>
+                  <div className="mt-3 flex flex-col gap-2">
+                    {q.options.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => updateQuiz(q.key, opt.value)}
+                        className={`rounded-sm border px-[18px] py-[15px] text-left text-[15px] transition-colors duration-150 ${
+                          quizAnswers[q.key] === opt.value ? "" : "border-line text-muted"
+                        }`}
+                        style={
+                          quizAnswers[q.key] === opt.value
+                            ? { borderColor: "var(--color-cobalt)", background: "var(--color-cobalt)", color: "var(--color-paper)" }
+                            : undefined
+                        }
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* STEP 5 — Generate */}
-        {step === 5 && (
-          <div className="mt-10">
-            <h1 className="font-display text-3xl leading-snug">Ready to generate your Brand Brief</h1>
-            <p className="mt-4 text-sm text-ink/70">
-              We'll use everything you shared to build your positioning, tone, target audience,
-              mission, and content pillars. You'll be able to edit it afterward.
-            </p>
-            {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
-          </div>
-        )}
-
-        <div className="mt-10 flex items-center justify-between">
-          <button
-            type="button"
-            disabled={step === 1}
-            onClick={goBack}
-            className="font-mono text-xs uppercase tracking-widest text-muted disabled:opacity-0"
-          >
-            Back
-          </button>
-
-          {step < 5 ? (
-            <button
-              type="button"
-              disabled={!stepIsValid()}
-              onClick={goNext}
-              className="btn-primary disabled:opacity-40"
-            >
-              Next
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled={submitting}
-              onClick={handleGenerate}
-              className="btn-primary disabled:opacity-50"
-            >
-              {submitting ? "Generating your brief…" : "Generate my Brand Brief"}
-            </button>
+          {step === 5 && (
+            <div className="rounded-sm border border-line p-8" style={{ background: "var(--color-paper-raised)" }}>
+              <div className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--color-cobalt)" }}>
+                Ready
+              </div>
+              <p className="mt-4 text-base leading-relaxed text-muted">
+                We'll use everything you shared to build your positioning, tone, target audience,
+                mission, and content pillars. You'll be able to edit all of it afterward.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-2">
+                {readyTags.map((t) => (
+                  <span
+                    key={t}
+                    className="rounded-full border px-3.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-[#8A867E]"
+                    style={{ borderColor: "var(--color-line)" }}
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+              {error && <p className="mt-6 text-sm" style={{ color: "#FF7A55" }}>{error}</p>}
+            </div>
           )}
         </div>
+      </div>
+
+      <div className="flex items-center justify-between border-t border-line px-10 py-6">
+        <button
+          type="button"
+          disabled={step === 1}
+          onClick={goBack}
+          className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted disabled:opacity-0"
+        >
+          ← Back
+        </button>
+
+        {step < 5 ? (
+          <button
+            type="button"
+            disabled={!stepIsValid()}
+            onClick={goNext}
+            data-magnetic
+            className="btn-primary disabled:opacity-40"
+          >
+            Next →
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={handleGenerate}
+            data-magnetic
+            className="btn-primary disabled:opacity-50"
+          >
+            {submitting && <span className="spinner" aria-hidden="true" />}
+            {submitting ? "Generating your brief…" : "Generate my Brand Brief"}
+          </button>
+        )}
       </div>
     </div>
   );
