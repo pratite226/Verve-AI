@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
-import Reveal from "../components/Reveal.jsx";
 
 const Login = () => {
   const { login } = useAuth();
@@ -27,54 +26,89 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-paper px-6 py-12">
-      <Reveal className="w-full max-w-sm auth-card px-8 py-10 sm:px-10 sm:py-12">
-        <p className="byline">Welcome back</p>
-        <h1 className="mt-4 font-display text-3xl">Log in</h1>
+    <div className="grid min-h-screen sm:grid-cols-[1.15fr_1fr]">
+      <div className="hidden flex-col justify-between border-r border-line bg-paper-raised p-10 sm:flex">
+        <div className="font-display text-[17px] font-extrabold tracking-tight">BRANDPILOT</div>
+        <div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted">Welcome back</div>
+          <h1
+            className="mt-6 font-display font-extrabold tracking-[-0.045em]"
+            style={{ fontSize: "clamp(44px,6.6vw,104px)", lineHeight: 0.9 }}
+          >
+            PICK UP
+            <br />
+            WHERE
+            <br />
+            YOU LEFT.
+          </h1>
+        </div>
+        <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted">
+          Positioning · Voice · Pillars · Plan
+        </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          <div className="field-shell">
-            <label className="field-label" htmlFor="email">Email</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              className="field-input"
-              value={form.email}
-              onChange={handleChange}
-              required
-            />
+      <div className="flex items-center justify-center bg-paper p-10">
+        <div className="w-full max-w-[400px]">
+          <div className="flex gap-1 rounded-full border border-line bg-paper-raised p-1">
+            <span className="flex-1 rounded-full py-2.5 text-center font-mono text-[11px] uppercase tracking-[0.18em]" style={{ background: "var(--color-cobalt)", color: "var(--color-paper)" }}>
+              Log in
+            </span>
+            <Link
+              to="/signup"
+              className="flex-1 rounded-full py-2.5 text-center font-mono text-[11px] uppercase tracking-[0.18em] text-muted"
+            >
+              Sign up
+            </Link>
           </div>
-          <div className="field-shell">
-            <label className="field-label" htmlFor="password">Password</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              className="field-input"
-              value={form.password}
-              onChange={handleChange}
-              required
-            />
-          </div>
 
-          {error && (
-            <p className="border border-red-700/30 bg-red-700/5 px-3 py-2 text-sm text-red-700">
-              {error}
-            </p>
-          )}
+          <form onSubmit={handleSubmit} className="mt-9 flex flex-col gap-6">
+            <div className="field-shell">
+              <label className="field-label" htmlFor="email">Email</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                className="field-input"
+                value={form.email}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="field-shell">
+              <label className="field-label" htmlFor="password">Password</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                className="field-input"
+                value={form.password}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-          <button type="submit" disabled={submitting} className="btn-primary w-full disabled:opacity-50">
-            {submitting && <span className="spinner" aria-hidden="true" />}
-            {submitting ? "Logging in…" : "Log in"}
-          </button>
-        </form>
+            {error && (
+              <div className="rounded-sm border px-3.5 py-3 text-sm" style={{ borderColor: "#4A1F16", background: "#1A0C08", color: "#FF7A55" }}>
+                {error}
+              </div>
+            )}
 
-        <p className="mt-6 text-sm text-muted">
-          New here?{" "}
-          <Link to="/signup" className="link-underline text-cobalt">Create an account</Link>
-        </p>
-      </Reveal>
+            <button type="submit" disabled={submitting} data-magnetic className="btn-primary w-full disabled:opacity-50">
+              {submitting && <span className="spinner" aria-hidden="true" />}
+              {submitting ? "Checking…" : "Log in"}
+            </button>
+
+            <p className="text-sm text-muted">Forgot your password? We can email a reset link.</p>
+          </form>
+
+          <p className="mt-6 text-sm text-muted">
+            New here?{" "}
+            <Link to="/signup" className="link-underline" style={{ color: "var(--color-cobalt)" }}>
+              Create an account
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 };

@@ -30,6 +30,11 @@ const dailySnapshotSchema = new mongoose.Schema(
 
 const analyticsSchema = new mongoose.Schema(
   {
+    // Referenced (not embedded): stores the User's _id rather than copying User fields onto
+    // this document. Contrast with dailySnapshots below, which IS embedded. `ref: "User"`
+    // is what makes this dereferenceable via `.populate("userId", ...)` — see
+    // analyticsController.getOverview, which does exactly that to pull profile fields
+    // without duplicating them here.
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

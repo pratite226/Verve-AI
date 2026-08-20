@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import api from "../services/api";
+import AppShell from "../components/AppShell.jsx";
 
 const BrandBrief = () => {
   const [currentHeadline, setCurrentHeadline] = useState("");
@@ -39,96 +39,103 @@ const BrandBrief = () => {
   };
 
   return (
-    <div className="min-h-screen bg-paper">
-      <header className="mx-auto flex max-w-4xl items-center justify-between px-6 py-8">
-        <Link to="/dashboard" className="font-display text-lg">BrandPilot</Link>
-        <nav className="flex items-center gap-6">
-          <Link to="/dashboard" className="font-mono text-xs uppercase tracking-widest text-muted hover:text-ink">
-            Dashboard
-          </Link>
-        </nav>
-      </header>
-
-      <main className="mx-auto max-w-4xl px-6 pb-24">
-        <p className="byline">Profile Makeover</p>
-        <h1 className="mt-4 font-display text-4xl">Rewrite your LinkedIn profile</h1>
-        <p className="mt-4 max-w-xl text-sm text-ink/70">
-          Paste your current headline and About section. We'll rewrite them using your Brand Brief,
-          so they actually sound like the person you're trying to become known as.
+    <AppShell>
+      <div className="px-12 pb-24 pt-11">
+        <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted">Profile Makeover</div>
+        <h1
+          className="mt-4 font-display font-extrabold tracking-[-0.04em]"
+          style={{ fontSize: "clamp(40px,5vw,80px)", lineHeight: 0.92 }}
+        >
+          Rewrite your
+          <br />
+          LinkedIn profile
+        </h1>
+        <p className="mt-6 max-w-[560px] text-base leading-relaxed text-[#8A867E]">
+          Paste your current headline and About section. We'll rewrite them using your Brand
+          Brief, so they sound like the person you're trying to become known as.
         </p>
 
-        {/* Input */}
-        <div className="mt-10 grid gap-6 border-t border-line pt-8 sm:grid-cols-2">
+        <div className="mt-10 grid gap-7 sm:grid-cols-2">
           <div>
-            <p className="field-label">Current headline</p>
+            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">Current headline</span>
             <input
-              className="field-input mt-2"
+              className="field-input mt-2.5"
               placeholder="e.g. Software Engineer at TechCorp"
               value={currentHeadline}
               onChange={(e) => setCurrentHeadline(e.target.value)}
             />
           </div>
-          <div className="sm:row-span-2">
-            <p className="field-label">Current About section</p>
+          <div>
+            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">Current About section</span>
             <textarea
-              rows={8}
-              className="field-input mt-2 resize-none"
-              placeholder="Paste your current About text here..."
+              rows={6}
+              className="mt-2.5 w-full resize-none rounded-sm border border-line p-4 text-[15px] leading-relaxed outline-none"
+              style={{ background: "var(--color-paper-raised)" }}
+              placeholder="Paste your current About text here…"
               value={currentAbout}
               onChange={(e) => setCurrentAbout(e.target.value)}
             />
           </div>
         </div>
 
-        {error && <p className="mt-6 text-sm text-red-700">{error}</p>}
+        {error && (
+          <div className="mt-8 rounded-sm border px-4 py-3.5 text-sm" style={{ borderColor: "#4A1F16", background: "#1A0C08", color: "#FF7A55" }}>
+            {error}
+          </div>
+        )}
 
         <button
           type="button"
           onClick={handleOptimize}
           disabled={loading || (!currentHeadline && !currentAbout)}
+          data-magnetic
           className="btn-primary mt-8 disabled:opacity-40"
         >
+          {loading && <span className="spinner" aria-hidden="true" />}
           {loading ? "Rewriting…" : "Optimize my profile"}
         </button>
 
-        {/* Before / After */}
         {result && (
-          <div className="mt-16 border-t border-line pt-10">
-            <p className="byline">Before / after</p>
+          <div className="mt-14 border-t border-line pt-10">
+            <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted">Before / after</div>
 
-            <div className="mt-6 grid gap-6 sm:grid-cols-2">
-              <div>
-                <p className="field-label">Before — headline</p>
-                <p className="mt-2 text-sm text-ink/60 line-through">{currentHeadline || "(none provided)"}</p>
+            <div className="mt-[26px] grid gap-px overflow-hidden rounded border border-line bg-line sm:grid-cols-2">
+              <div className="bg-paper-raised px-[30px] py-7">
+                <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">Before — headline</div>
+                <p className="mt-3.5 text-[17px] leading-snug line-through" style={{ color: "var(--color-muted)" }}>
+                  {currentHeadline || "(none provided)"}
+                </p>
               </div>
-              <div>
-                <p className="field-label">After — headline</p>
-                <div className="mt-2 flex items-start justify-between gap-3">
-                  <p className="font-display text-lg leading-snug">{result.optimizedHeadline}</p>
+              <div className="bg-paper-raised px-[30px] py-7" style={{ background: "#0E0E11" }}>
+                <div className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--color-cobalt)" }}>After — headline</div>
+                <div className="mt-3.5 flex items-start justify-between gap-3">
+                  <p className="text-[22px] font-display leading-snug">{result.optimizedHeadline}</p>
                   <button
                     type="button"
                     onClick={() => handleCopy("headline", result.optimizedHeadline)}
-                    className="shrink-0 font-mono text-xs uppercase tracking-widest text-cobalt hover:underline"
+                    className="shrink-0 font-mono text-xs uppercase tracking-widest hover:underline"
+                    style={{ color: "var(--color-cobalt)" }}
                   >
                     {copiedField === "headline" ? "Copied!" : "Copy"}
                   </button>
                 </div>
               </div>
 
-              <div>
-                <p className="field-label">Before — About</p>
-                <p className="mt-2 whitespace-pre-wrap text-sm text-ink/60 line-through">
+              <div className="bg-paper-raised px-[30px] py-7">
+                <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">Before — About</div>
+                <p className="mt-3.5 whitespace-pre-wrap text-sm leading-relaxed line-through" style={{ color: "var(--color-muted)" }}>
                   {currentAbout || "(none provided)"}
                 </p>
               </div>
-              <div>
-                <p className="field-label">After — About</p>
-                <div className="mt-2 flex items-start justify-between gap-3">
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{result.optimizedAbout}</p>
+              <div className="bg-paper-raised px-[30px] py-7" style={{ background: "#0E0E11" }}>
+                <div className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--color-cobalt)" }}>After — About</div>
+                <div className="mt-3.5 flex items-start justify-between gap-3">
+                  <p className="whitespace-pre-wrap text-[15px] leading-relaxed" style={{ color: "#CFCCC5" }}>{result.optimizedAbout}</p>
                   <button
                     type="button"
                     onClick={() => handleCopy("about", result.optimizedAbout)}
-                    className="shrink-0 font-mono text-xs uppercase tracking-widest text-cobalt hover:underline"
+                    className="shrink-0 font-mono text-xs uppercase tracking-widest hover:underline"
+                    style={{ color: "var(--color-cobalt)" }}
                   >
                     {copiedField === "about" ? "Copied!" : "Copy"}
                   </button>
@@ -137,15 +144,15 @@ const BrandBrief = () => {
             </div>
 
             {result.changesSummary && (
-              <div className="mt-8 border border-line p-4">
-                <p className="field-label">What changed</p>
-                <p className="mt-2 text-sm text-ink/80">{result.changesSummary}</p>
+              <div className="mt-5 rounded border px-6 py-[22px]" style={{ borderColor: "#23231F", background: "#101210" }}>
+                <div className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--color-cobalt)" }}>What changed</div>
+                <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "#A5A199" }}>{result.changesSummary}</p>
               </div>
             )}
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 };
 

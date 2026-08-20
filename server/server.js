@@ -6,7 +6,6 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const path = require("path");
 const helmet = require("helmet");
-const mongoSanitize = require("express-mongo-sanitize");
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
@@ -24,6 +23,7 @@ const billingRoutes = require("./routes/billingRoutes");
 const { handleWebhook } = require("./controllers/billingController");
 const { startJobs } = require("./jobs");
 const errorMiddleware = require("./middleware/errorMiddleware");
+const sanitizeInputs = require("./middleware/sanitizeMiddleware");
 const { initSocket } = require("./services/socketService");
 
 const app = express();
@@ -43,16 +43,8 @@ app.post("/api/billing/webhook", express.raw({ type: "application/json" }), hand
 app.use(express.json());
 app.use("/uploads", express.static(path.resolve(__dirname, "uploads")));
 
-// express-mongo-sanitize's default middleware reassigns req.query, which Express 5 exposes
-// as a getter-only property and throws on — call its `sanitize()` directly instead, which
-// mutates each object's own keys in place (stripping $/. -prefixed keys that could otherwise
-// be interpreted as Mongo query operators) without ever reassigning req.query itself.
-app.use((req, res, next) => {
-  mongoSanitize.sanitize(req.body);
-  mongoSanitize.sanitize(req.params);
-  mongoSanitize.sanitize(req.query);
-  next();
-});
+// NoSQL operator injection awareness — see middleware/sanitizeMiddleware.js.
+app.use(sanitizeInputs);
 
 // Scoped SSR (see LLD.md §7 / entry-server.jsx): only "/" — the static Landing page — is
 // server-rendered, and only when the client has actually been built (`npm run build:all` in

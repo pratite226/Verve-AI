@@ -1,17 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import api from "../services/api";
 import { readFileAsDataURL } from "../utils/async";
 import { useToast } from "../hooks/useToast.jsx";
-
-const CARD_SIZES = [
-  "w-56 h-64",
-  "w-64 h-48",
-  "w-48 h-80",
-  "w-72 h-56",
-  "w-56 h-56",
-  "w-64 h-72",
-];
+import AppShell from "../components/AppShell.jsx";
 
 const Canvas = () => {
   const [notes, setNotes] = useState([]);
@@ -63,12 +54,10 @@ const Canvas = () => {
 
   const handleFileSelected = async (e) => {
     const file = e.target.files?.[0];
-    e.target.value = ""; // allow re-selecting the same file later
+    e.target.value = "";
     if (!file) return;
 
     try {
-      // Promise-wrapped FileReader (utils/async.js) — lets this read like the axios calls
-      // below instead of nesting an onload callback.
       const dataUrl = await readFileAsDataURL(file);
       setImagePreview({ file, dataUrl });
     } catch {
@@ -121,28 +110,23 @@ const Canvas = () => {
   };
 
   return (
-    <div className="min-h-screen bg-paper">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-8">
-        <Link to="/dashboard" className="font-display text-lg">BrandPilot</Link>
-        <nav className="flex items-center gap-6">
-          <Link to="/dashboard" className="font-mono text-xs uppercase tracking-widest text-muted hover:text-ink">
-            Dashboard
-          </Link>
-          <Link to="/content-studio" className="font-mono text-xs uppercase tracking-widest text-muted hover:text-ink">
-            Content Studio
-          </Link>
-        </nav>
-      </header>
-
-      <div className="mx-auto max-w-6xl px-6">
-        <p className="byline">Canvas</p>
-        <h1 className="mt-4 font-display text-4xl">Dump your ideas here</h1>
-        <p className="mt-3 max-w-xl text-sm text-ink/70">
-          Add scattered thoughts below. Scroll through them like a gallery, then ask AI
-          what content you could make from what's here.
+    <AppShell>
+      <div className="px-12 pb-24 pt-11">
+        <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted">Canvas</div>
+        <h1
+          className="mt-4 font-display font-extrabold tracking-[-0.04em]"
+          style={{ fontSize: "clamp(40px,5vw,80px)", lineHeight: 0.92 }}
+        >
+          Dump your
+          <br />
+          ideas here
+        </h1>
+        <p className="mt-6 max-w-[540px] text-base leading-relaxed text-[#8A867E]">
+          Add scattered thoughts below, then ask the AI what content you could make from what's
+          here.
         </p>
 
-        <div className="mt-8 flex gap-2">
+        <div className="mt-8 flex max-w-[760px] items-end gap-3">
           <input
             className="field-input"
             placeholder="Type a quick idea, thought, or note…"
@@ -155,12 +139,7 @@ const Canvas = () => {
               }
             }}
           />
-          <button
-            type="button"
-            onClick={handleAddNote}
-            disabled={adding}
-            className="btn-secondary shrink-0 disabled:opacity-50"
-          >
+          <button type="button" onClick={handleAddNote} disabled={adding} className="btn-secondary shrink-0 disabled:opacity-50">
             {adding ? "Adding…" : "Add note"}
           </button>
           <input
@@ -170,110 +149,97 @@ const Canvas = () => {
             onChange={handleFileSelected}
             className="hidden"
           />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="btn-secondary shrink-0"
-          >
+          <button type="button" onClick={() => fileInputRef.current?.click()} className="btn-secondary shrink-0">
             Add image
           </button>
           <button
             type="button"
             onClick={handleAnalyze}
             disabled={analyzing || notes.length === 0}
+            data-magnetic
             className="btn-primary shrink-0 disabled:opacity-40"
           >
+            {analyzing && <span className="spinner" aria-hidden="true" />}
             {analyzing ? "Analyzing…" : "Analyze my board"}
           </button>
         </div>
 
         {imagePreview && (
-          <div className="mt-4 flex items-center gap-4 border border-line p-4">
+          <div className="mt-5 flex items-center gap-4 rounded border border-line bg-paper-raised p-4">
             <img src={imagePreview.dataUrl} alt="Preview" className="h-20 w-20 object-cover" />
             <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleConfirmImage}
-                disabled={uploading}
-                className="btn-primary disabled:opacity-50"
-              >
+              <button type="button" onClick={handleConfirmImage} disabled={uploading} data-magnetic className="btn-primary disabled:opacity-50">
                 {uploading ? "Uploading…" : "Add to board"}
               </button>
-              <button
-                type="button"
-                onClick={() => setImagePreview(null)}
-                className="btn-secondary"
-              >
+              <button type="button" onClick={() => setImagePreview(null)} className="btn-secondary">
                 Cancel
               </button>
             </div>
           </div>
         )}
 
-        {analyzeError && <p className="mt-4 text-sm text-red-700">{analyzeError}</p>}
+        {analyzeError && (
+          <div className="mt-5 rounded-sm border px-4 py-3.5 text-sm" style={{ borderColor: "#4A1F16", background: "#1A0C08", color: "#FF7A55" }}>
+            {analyzeError}
+          </div>
+        )}
 
         {analysis && (
-          <div className="mt-6 border border-line p-5">
-            <p className="field-label">Board summary</p>
-            <p className="mt-2 text-sm text-ink/80">{analysis.summary}</p>
-
+          <div className="mt-9 rounded border px-[30px] py-7" style={{ borderColor: "#23231F", background: "#101210" }}>
+            <div className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--color-cobalt)" }}>Board analysis</div>
+            <p className="mt-3.5 max-w-[820px] text-[19px] leading-snug tracking-[-0.015em]">{analysis.summary}</p>
             {analysis.suggestions?.length > 0 && (
-              <div className="mt-4 space-y-3">
+              <div className="mt-5 flex flex-col gap-3.5">
                 {analysis.suggestions.map((s, i) => (
-                  <div key={i} className="border-t border-line pt-3">
-                    <p className="text-sm font-medium text-ink">{s.idea}</p>
-                    <p className="mt-1 text-xs text-muted">Based on: {s.basedOn}</p>
+                  <div key={i} className="border-t border-line pt-3.5">
+                    <p className="text-sm font-medium">{s.idea}</p>
+                    <p className="mt-1.5 text-xs text-muted">Based on: {s.basedOn}</p>
                   </div>
                 ))}
               </div>
             )}
           </div>
         )}
-      </div>
 
-      {loading && <p className="mx-auto mt-8 max-w-6xl px-6 text-sm text-muted">Loading board…</p>}
+        {loading && <p className="mt-9 text-sm text-muted">Loading board…</p>}
 
-      {!loading && notes.length === 0 && (
-        <p className="mx-auto mt-8 max-w-6xl px-6 text-sm text-muted">
-          Your board is empty — add a note above to get started.
-        </p>
-      )}
+        {!loading && notes.length === 0 && (
+          <div className="mt-9 rounded border border-dashed px-10 py-20 text-center" style={{ borderColor: "var(--color-line)" }}>
+            <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted">Empty board</div>
+            <p className="mx-auto mt-4 max-w-[400px] text-[15px] leading-relaxed text-[#8A867E]">
+              Half-thoughts welcome. The AI reads the whole board at once.
+            </p>
+          </div>
+        )}
 
-      {!loading && notes.length > 0 && (
-        <div className="mt-10 w-full overflow-x-auto pb-16">
-          <div className="flex gap-5 px-6" style={{ width: "max-content" }}>
+        {!loading && notes.length > 0 && (
+          <div className="mt-9" style={{ columnCount: 4, columnGap: "14px" }}>
             {notes.map((note, i) => (
               <div
                 key={note._id}
-                className={`group relative shrink-0 snap-start border border-line bg-paper p-5 ${
-                  CARD_SIZES[i % CARD_SIZES.length]
-                }`}
+                className="group relative mb-3.5 break-inside-avoid rounded border border-line bg-paper-raised p-5 transition-colors duration-150 hover:border-[var(--color-cobalt)]"
               >
-                <p className="font-mono text-xs text-muted">{String(i + 1).padStart(2, "0")}</p>
+                <p className="font-mono text-[9px] text-muted">{String(i + 1).padStart(2, "0")}</p>
                 {note.type === "image" ? (
-                  <img
-                    src={note.content}
-                    alt="Canvas note"
-                    className="mt-3 h-[calc(100%-2rem)] w-full object-cover"
-                  />
+                  <img src={note.content} alt="Canvas note" className="mt-3 w-full rounded-sm object-cover" />
                 ) : (
-                  <p className="mt-3 font-display text-lg leading-snug text-ink/90">
+                  <p className="mt-3 font-display text-lg leading-snug" style={{ color: "rgba(244,242,238,.9)" }}>
                     {note.content}
                   </p>
                 )}
                 <button
                   type="button"
                   onClick={() => handleDeleteNote(note._id)}
-                  className="absolute right-3 top-3 text-muted opacity-0 transition-opacity hover:text-red-700 group-hover:opacity-100"
+                  className="absolute right-3 top-3 text-muted opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
                 >
                   ×
                 </button>
               </div>
             ))}
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </AppShell>
   );
 };
 

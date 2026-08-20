@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom'
+import CursorFX from './components/CursorFX.jsx'
 import Landing from './pages/Landing.jsx'
 import Login from './pages/Login.jsx'
 import Signup from './pages/Signup.jsx'
@@ -13,6 +14,8 @@ import ProtectedRoute from './routes/ProtectedRoute.jsx'
 
 function App() {
   return (
+    <>
+    <CursorFX />
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
@@ -25,6 +28,7 @@ function App() {
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/canvas" element={<ProtectedRoute><Canvas /></ProtectedRoute>} />
     </Routes>
+    </>
   )
 }
 
