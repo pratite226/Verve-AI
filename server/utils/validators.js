@@ -1,4 +1,9 @@
 const EMAIL_RULE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Shared between signup and reset-password (authController.js) — both need to enforce the
+// exact same rule, so it lives here once rather than drifting out of sync in two places.
+const PASSWORD_RULE = /^(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
+const PASSWORD_RULE_MESSAGE =
+  "Password must be at least 8 characters and include a number and a special character";
 
 const isValidEmail = (email) => typeof email === "string" && EMAIL_RULE.test(email);
 
@@ -11,4 +16,4 @@ const sanitizeText = (value) => {
   return value.replace(/<[^>]*>/g, "").trim();
 };
 
-module.exports = { isValidEmail, sanitizeText };
+module.exports = { isValidEmail, sanitizeText, PASSWORD_RULE, PASSWORD_RULE_MESSAGE };

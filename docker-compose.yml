@@ -13,7 +13,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: brandpilot_billing
+      POSTGRES_DB: verve_billing
     ports:
       - "5432:5432"
     volumes:
@@ -45,8 +45,8 @@ services:
     environment:
       # Overrides — inside the Docker network, services reach each other by service name,
       # not localhost.
-      MONGO_URI: mongodb://mongo:27017/brandpilot
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/brandpilot_billing
+      MONGO_URI: mongodb://mongo:27017/verve
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/verve_billing
       REDIS_URL: redis://redis:6379
       CLIENT_URL: http://localhost:5173
     depends_on:
@@ -64,7 +64,7 @@ services:
       start_period: 10s
 
   client:
-    build: ./client/brandai
+    build: ./client/verve
     restart: unless-stopped
     ports:
       - "8080:80"

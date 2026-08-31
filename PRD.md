@@ -1,4 +1,4 @@
-# Product Requirements Document (PRD) — BrandPilot AI
+# Product Requirements Document (PRD) — Verve AI
 
 ## 1. Problem Statement
 
@@ -14,7 +14,7 @@ and unclear without expert help:
 - Existing AI writing tools generate generic copy with no memory of *who the user is* — every
   post has to be re-explained from scratch.
 
-**BrandPilot AI** solves this by first building a structured "Brand Brief" for the user (their
+**Verve AI** solves this by first building a structured "Brand Brief" for the user (their
 positioning, tone, target audience, and content pillars), then using that brief as persistent
 context for every piece of content the AI generates afterward — so content stays consistent
 with a single, deliberate personal brand instead of reading like generic AI output.

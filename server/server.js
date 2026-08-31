@@ -41,18 +41,33 @@ app.use(helmet());
 app.post("/api/billing/webhook", express.raw({ type: "application/json" }), handleWebhook);
 
 app.use(express.json());
-app.use("/uploads", express.static(path.resolve(__dirname, "uploads")));
+
+// helmet()'s default Cross-Origin-Resource-Policy: same-origin (set globally above) blocks
+// the browser from rendering these files at all when loaded from a different origin than
+// this server — which is the normal case here: the client runs on its own origin in dev
+// (Vite on :5173 vs this server on :5000) and in the split static-deploy setup this app
+// supports (see the SPA-fallback comment below). Canvas image notes render via a plain
+// `<img src>` pointing at this exact path, so without this override every uploaded image
+// would silently fail to load anywhere except a same-origin deployment.
+app.use(
+  "/uploads",
+  (req, res, next) => {
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    next();
+  },
+  express.static(path.resolve(__dirname, "uploads"))
+);
 
 // NoSQL operator injection awareness — see middleware/sanitizeMiddleware.js.
 app.use(sanitizeInputs);
 
 // Scoped SSR (see LLD.md §7 / entry-server.jsx): only "/" — the static Landing page — is
 // server-rendered, and only when the client has actually been built (`npm run build:all` in
-// client/brandai). Everything else stays the plain client-rendered SPA. This keeps the
+// client/verve). Everything else stays the plain client-rendered SPA. This keeps the
 // feature purely additive: without a build present, "/" falls back to today's plain-text
 // response and no other route's behavior changes at all.
-const CLIENT_DIST_DIR = path.resolve(__dirname, "../client/brandai/dist");
-const SSR_ENTRY_PATH = path.resolve(__dirname, "../client/brandai/dist-ssr/entry-server.js");
+const CLIENT_DIST_DIR = path.resolve(__dirname, "../client/verve/dist");
+const SSR_ENTRY_PATH = path.resolve(__dirname, "../client/verve/dist-ssr/entry-server.js");
 const clientBuildAvailable = fs.existsSync(path.join(CLIENT_DIST_DIR, "index.html"));
 const ssrBuildAvailable = clientBuildAvailable && fs.existsSync(SSR_ENTRY_PATH);
 

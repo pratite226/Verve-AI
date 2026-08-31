@@ -1,4 +1,4 @@
-# Low-Level Design (LLD) — BrandPilot AI
+# Low-Level Design (LLD) — Verve AI
 
 ## 1. Data Models (Mongoose schemas)
 
@@ -100,6 +100,19 @@ All routes below except `POST /api/auth/signup` and `POST /api/auth/login` requi
 | POST | `/signup` | `{ name, email, password, industry?, careerStage?, goals? }` | `{ success, message }` — password must be 8+ chars incl. a number and a special character |
 | POST | `/login` | `{ email, password }` | `{ success, token, user }` |
 | GET | `/me` | — | `{ success, user }` |
+| POST | `/forgot-password` | `{ email }` | `{ success, message }` — always the same generic message whether or not the email is registered, to avoid leaking which emails have accounts |
+| POST | `/reset-password` | `{ token, password }` | `{ success, message }` — `token` is the raw value from the emailed link; only its SHA-256 hash is ever stored (`User.resetPasswordTokenHash`), and it's single-use + expires after 1 hour (`User.resetPasswordExpires`) |
+
+**Password reset flow**: `forgotPassword` (`authController.js`) generates a random token via
+`crypto.randomBytes(32)`, stores only its SHA-256 hash + a 1-hour expiry on the `User`
+document, and emails `${CLIENT_URL}/reset-password/<rawToken>` through
+`services/mailerService.js`. The mailer needs `SMTP_HOST`/`SMTP_USER`/`SMTP_PASS` configured
+(see `.env.example`) — without them, it logs the link to the server console instead of
+throwing, so the whole flow still works end-to-end in local dev without real SMTP
+credentials. `resetPassword` re-hashes the incoming token and looks up a `User` whose stored
+hash matches and whose expiry hasn't passed; on success it clears both fields, so the same
+link can't be reused. Client pages: `ForgotPassword.jsx` (`/forgot-password`) and
+`ResetPassword.jsx` (`/reset-password/:token`), both linked from `Login.jsx`.
 
 ### Brand — `/api/brand`
 | Method | Path | Body | Returns |
@@ -212,12 +225,13 @@ by the client before creating an image-type `CanvasNote` with that URL as `conte
 ## 4. Frontend Structure
 
 ```
-client/brandai/src/
+client/verve/src/
 ├── pages/            # one component per route (Landing, Login, Signup, Onboarding,
 │                      # Dashboard, ContentStudio, WeeklyPlanner, BrandBrief (Profile
 │                      # Makeover), Settings, Canvas)
 ├── components/        # shared UI (Reveal — scroll-in animation wrapper)
 ├── context/            # AuthContext — user/loading state + login/signup/logout
+│                        # ThemeContext — dark/light theme + persistence
 ├── routes/             # ProtectedRoute — redirects to /login when no user
 ├── services/            # api.js — axios instance, attaches JWT from localStorage
 └── App.jsx              # route table; protected pages wrapped in <ProtectedRoute>
@@ -231,6 +245,21 @@ client/brandai/src/
 - **Styling**: Tailwind v4 with a small custom design-token layer in `index.css` (`--color-*`,
   `--font-*` custom properties consumed as Tailwind utilities, plus hand-written component
   classes like `.btn-primary`, `.field-input`, `.auth-card` for the shared editorial visual style).
+- **Theming**: dark is the app's default and brand identity (not the OS preference — see the
+  bootstrap script in `index.html`, which deliberately ignores `prefers-color-scheme` so
+  first-time visitors see the intended design rather than whatever their OS defaults to). Every
+  `--color-*` token is redefined under `:root[data-theme="light"]` in `index.css` for the opt-in
+  light theme, including role-shifted ones like `--color-cobalt` (glow-bright in dark, since it's
+  only ever used as text/border/fill against a near-black ground; moss-olive in light, so the
+  same uses stay readable against paper) and `--color-on-accent` (the color of text sitting on
+  an accent-filled surface — dark in dark mode, light in light mode — kept independent of
+  `--color-paper` specifically so accent-filled buttons/chips/`::selection` don't depend on
+  whichever color the *page* background happens to be). `ThemeContext` toggles the `data-theme`
+  attribute on `<html>` and persists the choice to `localStorage`; `ThemeToggle.jsx` is the
+  button, rendered in `AppShell` (all authenticated pages) and in the headers of Landing/
+  Login/Signup. The `index.html` bootstrap script applies the stored/default theme
+  synchronously before first paint (avoids a flash of the wrong theme) and lives outside the
+  React tree, so it can never cause a hydration mismatch on the SSR'd Landing route.
 
 ## 5. Error Handling Conventions
 
@@ -269,13 +298,13 @@ client/brandai/src/
 - **Hoisting**: elsewhere the codebase uses `const`/`let` exclusively (no `var`) and defines
   functions as `const fn = () => {}` rather than `function fn() {}`, sidestepping hoisting's
   more surprising failure modes. The one deliberate exception is
-  `client/brandai/src/utils/async.js`'s `retryWithBackoff`/`attempt` pair: `retryWithBackoff`
+  `client/verve/src/utils/async.js`'s `retryWithBackoff`/`attempt` pair: `retryWithBackoff`
   (the public entry point, defined first) calls `attempt` (the recursive retry loop, defined
   below it) — legal only because `function` declarations hoist their full body, not just the
   binding. See the comment above `attempt` for why that ordering (entry point before its
   helper) is the actual reason to lean on hoisting instead of avoiding it.
-- **Closures**: `debounce`/`coalesceMicrotask` (`client/brandai/src/utils/async.js`) and the
-  toast auto-dismiss timers (`client/brandai/src/hooks/useToast.jsx`) all rely on values
+- **Closures**: `debounce`/`coalesceMicrotask` (`client/verve/src/utils/async.js`) and the
+  toast auto-dismiss timers (`client/verve/src/hooks/useToast.jsx`) all rely on values
   captured in an enclosing scope persisting across calls — see the inline comments in those
   files for the specific mechanism in each.
 - **Event loop**: two real mechanisms, one per task type. `useToast`'s `setTimeout`-based

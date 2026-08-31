@@ -42,6 +42,21 @@ const userSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    // Only the SHA-256 hash of the reset token is stored, never the raw token — the raw
+    // token only ever exists in the emailed link and in the client's URL. Unlike the
+    // password, this doesn't need bcrypt: the token is high-entropy random data (not a
+    // human-chosen secret an attacker could dictionary-guess), so a fast hash is enough to
+    // stop a stolen database dump from being usable as valid reset tokens.
+    resetPasswordTokenHash: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    resetPasswordExpires: {
+      type: Date,
+      default: null,
+      select: false,
+    },
   },
   { timestamps: true } // auto-adds createdAt + updatedAt
 );
