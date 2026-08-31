@@ -1,4 +1,4 @@
-# Contributing to BrandPilot AI
+# Contributing to Verve AI
 
 ## Branching
 
@@ -35,4 +35,4 @@
 ## Before opening a PR
 
 - `cd server && npm install && npm run dev` boots without errors.
-- `cd client/brandai && npm install && npm run lint && npm run build` passes.
+- `cd client/verve && npm install && npm run lint && npm run build` passes.

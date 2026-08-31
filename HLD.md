@@ -1,8 +1,8 @@
-# High-Level Design (HLD) — BrandPilot AI
+# High-Level Design (HLD) — Verve AI
 
 ## 1. Architecture Overview
 
-BrandPilot AI is a standard three-tier web application: a React single-page app, a Node/Express
+Verve AI is a standard three-tier web application: a React single-page app, a Node/Express
 REST API, and MongoDB for storage — with a Google Gemini model as an external AI service the
 backend calls into for every generation feature.
 
@@ -129,11 +129,11 @@ fails fast on boot if a required one is missing (`server/utils/validateEnv.js`).
 Three deploy-ready modes now exist, all using the same code:
 
 1. **Separate static frontend + API** (the intended default): client built with `npm run
-   build` and hosted as static files (`client/brandai/vercel.json` handles the SPA rewrite
+   build` and hosted as static files (`client/verve/vercel.json` handles the SPA rewrite
    for Vercel-style hosts); server runs as its own Node process/container. This is what
    `docker-compose.yml`'s `client` (nginx-served static build) and `server` services model.
 2. **Single-process monolith**: if the client is built *and* colocated with the server
-   (`npm run build:all` in `client/brandai`, producing `dist/` + `dist-ssr/`), `server.js`
+   (`npm run build:all` in `client/verve`, producing `dist/` + `dist-ssr/`), `server.js`
    also serves the client — `GET /` is server-rendered (see §5's SSR note below), every other
    non-`/api`/`/uploads` path falls back to `index.html` for client-side routing, and static
    assets are served directly. This mode is **not** what `docker-compose.yml` runs (its
@@ -141,7 +141,7 @@ Three deploy-ready modes now exist, all using the same code:
    available for a single-service host (Render/Railway-style) that only wants one process.
 3. **Docker Compose** (`docker-compose.yml`): `mongo`, `postgres`, `redis`, `server`
    (`server/Dockerfile`, multi-stage — devDependencies only used to run `prisma generate` at
-   build time), and `client` (`client/brandai/Dockerfile`, multi-stage — `vite build` served
+   build time), and `client` (`client/verve/Dockerfile`, multi-stage — `vite build` served
    by nginx with an SPA rewrite, `nginx.conf`) all wired together for local parity with a
    real deployment.
 
@@ -151,7 +151,7 @@ CI (`.github/workflows/ci.yml`) lints + builds the client and boot-checks the se
 one-time account-level setup this repo doesn't and can't do on its own — the pieces above are
 what make that setup a config step rather than an app-restructuring one.
 
-**Server-side rendering** (`client/brandai/src/entry-server.jsx`) is intentionally scoped to
+**Server-side rendering** (`client/verve/src/entry-server.jsx`) is intentionally scoped to
 the static Landing page only — it has no data fetching, so there's nothing async to coordinate
 server-side. `main.jsx` uses `hydrateRoot` when the root element already has server-rendered
 children (true only for that SSR'd `/` response) and `createRoot` otherwise, so the same

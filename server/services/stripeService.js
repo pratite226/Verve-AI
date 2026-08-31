@@ -29,7 +29,7 @@ const createCheckoutSession = async ({ mongoUserId, planId, planName, priceCents
       {
         price_data: {
           currency: "usd",
-          product_data: { name: `BrandPilot ${planName}` },
+          product_data: { name: `Verve ${planName}` },
           unit_amount: priceCents,
           recurring: { interval },
         },
