@@ -138,16 +138,21 @@ const Landing = () => {
   return (
     <div className="min-h-screen bg-bg text-text">
       <header
-        className="sticky top-0 z-40 flex items-center justify-between px-10 py-[22px]"
+        className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-4 sm:px-10 sm:py-[22px]"
         style={{ backgroundColor: "var(--color-header-bg)", backdropFilter: "blur(14px)", borderBottom: "1px solid var(--color-hair)" }}
       >
-        <Logo />
-        <nav className="flex items-center gap-6">
-          <ThemeToggle />
+        <Logo size={22} />
+        <nav className="flex items-center gap-2.5 sm:gap-6">
+          <ThemeToggle variant="icon" className="sm:hidden" />
+          <ThemeToggle className="hidden sm:inline-flex" />
           <Link to="/login" className="font-mono text-[11px] uppercase tracking-[0.22em]">
             Log in
           </Link>
-          <Button as={Link} to="/signup">
+          <Button
+            as={Link}
+            to="/signup"
+            className="px-4 py-2.5 text-[10px] sm:px-[29px] sm:py-[17px] sm:text-[11px]"
+          >
             Get started
           </Button>
         </nav>
@@ -160,7 +165,7 @@ const Landing = () => {
         <Reveal delay={80}>
           <h1
             className="mt-8 font-extrabold tracking-[-0.045em] text-head"
-            style={{ fontSize: "clamp(56px,10.5vw,168px)", lineHeight: 0.88, textWrap: "balance" }}
+            style={{ fontSize: "clamp(40px,11vw,168px)", lineHeight: 0.94, textWrap: "balance" }}
           >
             BECOME THE
             <br />

@@ -151,9 +151,9 @@ const Canvas = () => {
         </div>
 
         {imagePreview && (
-          <div className="verve-card mt-5 flex items-center gap-4 p-4">
+          <div className="verve-card mt-5 flex flex-wrap items-center gap-4 p-4">
             <img src={imagePreview.dataUrl} alt="Preview" className="h-20 w-20 rounded-lg object-cover" />
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button onClick={handleConfirmImage} loading={uploading}>
                 {uploading ? "Uploading…" : "Add to board"}
               </Button>
@@ -192,7 +192,7 @@ const Canvas = () => {
         )}
 
         {!loading && notes.length > 0 && (
-          <div className="mt-9" style={{ columnCount: 4, columnGap: "14px" }}>
+          <div className="mt-9 columns-1 gap-3.5 sm:columns-2 lg:columns-4">
             {notes.map((note, i) => (
               <div
                 key={note._id}
