@@ -14,9 +14,21 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
+    // Optional because Google-only accounts (see authController.js's googleAuth) never set
+    // one — they authenticate purely via Google ID token verification, not a local secret.
     password: {
       type: String,
-      required: true,
+      required: false,
+    },
+    // Google's stable per-account identifier ("sub" claim in the ID token) — not the email,
+    // since a user could change their Google account's email but "sub" never changes. Sparse
+    // so the unique index doesn't reject multiple documents that all lack this field (every
+    // email/password-only account).
+    googleId: {
+      type: String,
+      default: null,
+      unique: true,
+      sparse: true,
     },
     industry: {
       type: String,

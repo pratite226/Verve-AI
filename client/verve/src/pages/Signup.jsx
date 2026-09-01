@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import ThemeToggle from "../components/ThemeToggle.jsx";
 import Logo from "../components/Logo.jsx";
 import PasswordInput from "../components/PasswordInput.jsx";
+import GoogleSignInButton from "../components/GoogleSignInButton.jsx";
 import { Alert, Button } from "../components/ui.jsx";
 import { passwordChecks, PASSWORD_PATTERN_ATTR, PASSWORD_PATTERN_TITLE } from "../utils/passwordRules";
 
@@ -30,6 +31,8 @@ const Signup = () => {
       setSubmitting(false);
     }
   };
+
+  const handleGoogleSuccess = (isNewUser) => navigate(isNewUser ? "/onboarding" : "/dashboard");
 
   const checks = passwordChecks(form.password);
 
@@ -132,6 +135,19 @@ const Signup = () => {
 
             <p className="text-sm text-muted">By continuing you agree to the terms.</p>
           </form>
+
+          {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+            <>
+              <div className="mt-7 flex items-center gap-4">
+                <span className="h-px flex-1 bg-hair" />
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-faint">Or</span>
+                <span className="h-px flex-1 bg-hair" />
+              </div>
+              <div className="mt-5">
+                <GoogleSignInButton onSuccess={handleGoogleSuccess} onError={setError} />
+              </div>
+            </>
+          )}
 
           <p className="mt-6 text-sm text-muted">
             Already have an account?{" "}
