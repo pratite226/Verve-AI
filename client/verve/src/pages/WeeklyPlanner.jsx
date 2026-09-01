@@ -145,7 +145,7 @@ const WeeklyPlanner = () => {
           >
             {formatDayHeader(weekDays[0])} – {formatDayHeader(weekDays[6])}
           </h1>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="ghost" onClick={goPrevWeek}>← Prev</Button>
             <Button variant="ghost" onClick={goNextWeek}>Next →</Button>
             <Button onClick={handlePlanWeek} loading={planning}>

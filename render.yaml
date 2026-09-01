@@ -1,0 +1,46 @@
+# Render Blueprint for the Verve AI API — deploy via Render's "New +" -> "Blueprint",
+# pointing at this repo. Builds and runs server/ as its own long-running Node process
+# (Render, unlike Vercel, supports that directly — see HLD.md §6 for the three deploy modes).
+#
+# Only MONGO_URI and JWT_SECRET are required to boot (server/utils/validateEnv.js) — every
+# other var below is optional and the corresponding feature just degrades gracefully without
+# it (Redis caching, Gemini AI generation, Stripe billing, SMTP email). Fill in what you have;
+# add the rest later as you enable those features.
+services:
+  - type: web
+    name: verve-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install && npx prisma generate
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CLIENT_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
