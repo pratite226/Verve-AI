@@ -99,6 +99,7 @@ All routes below except `POST /api/auth/signup` and `POST /api/auth/login` requi
 |---|---|---|---|
 | POST | `/signup` | `{ name, email, password, industry?, careerStage?, goals? }` | `{ success, message }` — password must be 8+ chars incl. a number and a special character |
 | POST | `/login` | `{ email, password }` | `{ success, token, user }` |
+| POST | `/google` | `{ credential }` — the Google ID token string from Identity Services | `{ success, token, needsOnboarding, user }` — `501` if `GOOGLE_CLIENT_ID` is unset |
 | GET | `/me` | — | `{ success, user }` |
 | POST | `/forgot-password` | `{ email }` | `{ success, message }` — always the same generic message whether or not the email is registered, to avoid leaking which emails have accounts |
 | POST | `/reset-password` | `{ token, password }` | `{ success, message }` — `token` is the raw value from the emailed link; only its SHA-256 hash is ever stored (`User.resetPasswordTokenHash`), and it's single-use + expires after 1 hour (`User.resetPasswordExpires`) |
@@ -113,6 +114,18 @@ credentials. `resetPassword` re-hashes the incoming token and looks up a `User` 
 hash matches and whose expiry hasn't passed; on success it clears both fields, so the same
 link can't be reused. Client pages: `ForgotPassword.jsx` (`/forgot-password`) and
 `ResetPassword.jsx` (`/reset-password/:token`), both linked from `Login.jsx`.
+
+**Google sign-in flow**: `googleAuth` (`authController.js`) verifies the ID token with
+`google-auth-library`'s `verifyIdToken` (signature, `aud` = `GOOGLE_CLIENT_ID`, `iss`,
+expiry), then requires both a `sub` claim and a Google-**verified** `email` — an unverified
+email is rejected with `401` for login, linking, and account creation alike (so nobody can
+pre-register an address they don't control). Resolution order: match on `googleId` → else
+link Google onto an existing account with that email → else create a new account (a
+concurrent-first-login `E11000` is caught and re-resolved). `needsOnboarding` is `true` for a
+newly created account or any account with no `BrandBrief` yet; the client
+(`GoogleSignInButton.jsx` → `AuthContext.loginWithGoogle`) routes on it (`/onboarding` vs
+`/dashboard`). Optional feature: with `GOOGLE_CLIENT_ID` unset the endpoint returns `501` and
+the client hides the button (needs `VITE_GOOGLE_CLIENT_ID` too — see `.env.example` files).
 
 ### Brand — `/api/brand`
 | Method | Path | Body | Returns |

@@ -30,7 +30,7 @@ const Login = () => {
     }
   };
 
-  const handleGoogleSuccess = (isNewUser) => navigate(isNewUser ? "/onboarding" : "/dashboard");
+  const handleGoogleSuccess = (needsOnboarding) => navigate(needsOnboarding ? "/onboarding" : "/dashboard");
 
   return (
     <div className="grid min-h-screen sm:grid-cols-[1.15fr_1fr]">

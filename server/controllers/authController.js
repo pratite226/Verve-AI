@@ -2,6 +2,7 @@ const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const { OAuth2Client } = require("google-auth-library");
 const User = require("../models/User");
+const BrandBrief = require("../models/BrandBrief");
 const generateToken = require("../utils/generateToken");
 const { isValidEmail, PASSWORD_RULE, PASSWORD_RULE_MESSAGE } = require("../utils/validators");
 const { sendPasswordResetEmail } = require("../services/mailerService");
@@ -127,8 +128,8 @@ const login = async (req, res) => {
 // Body: { credential } — the ID token string from Google Identity Services' Sign-In button.
 // Handles both first-time and returning Google users transparently: finds an existing
 // Google-linked account, links Google to a matching email/password account, or creates a
-// brand new account — whichever applies. Frontend uses `isNewUser` to decide whether to route
-// to onboarding (never done the intake) or straight to the dashboard.
+// brand new account — whichever applies. Returns `needsOnboarding` (new account, or an
+// existing one with no Brand Brief yet) so the frontend routes to /onboarding vs /dashboard.
 const googleAuth = async (req, res) => {
   try {
     if (!googleClient) {
@@ -157,47 +158,69 @@ const googleAuth = async (req, res) => {
       });
     }
 
-    if (!payload?.email) {
+    // `sub` (Google's stable account id) is what we key accounts on — without it,
+    // User.findOne({ googleId: undefined }) would degrade to findOne({}) and match an
+    // arbitrary user. A genuine verified ID token always carries both claims.
+    if (!payload?.sub || !payload.email) {
       return res.status(401).json({
         success: false,
-        message: "Google didn't provide an email for this account.",
+        message: "Google didn't provide the information we need to sign you in.",
+      });
+    }
+
+    // Reject unverified emails outright — for login, linking, and account creation alike.
+    // Allowing an unverified email to create an account lets someone pre-register an
+    // address they don't control and block/absorb the real owner's later signup.
+    if (!payload.email_verified) {
+      return res.status(401).json({
+        success: false,
+        message: "Your Google account's email isn't verified. Verify it with Google, then try again.",
       });
     }
 
     let user = await User.findOne({ googleId: payload.sub });
-    let isNewUser = false;
+    let created = false;
 
     if (!user) {
-      // Not linked yet — an email/password account may already own this email. Only trust
-      // it for linking when Google itself reports the email as verified, so an attacker
-      // can't claim someone else's account via an unverified email on their Google side.
+      // Not linked yet — an email/password account may already own this (now known-verified)
+      // email, so link Google onto it; otherwise make a new account.
       user = await User.findOne({ email: payload.email.toLowerCase() });
 
       if (user) {
-        if (!payload.email_verified) {
-          return res.status(401).json({
-            success: false,
-            message: "That Google account's email isn't verified — please log in with your password instead.",
-          });
-        }
         user.googleId = payload.sub;
         await user.save();
       } else {
-        user = await User.create({
-          name: payload.name || payload.email.split("@")[0],
-          email: payload.email,
-          googleId: payload.sub,
-        });
-        isNewUser = true;
+        try {
+          user = await User.create({
+            name: payload.name || payload.email.split("@")[0],
+            email: payload.email,
+            googleId: payload.sub,
+          });
+          created = true;
+        } catch (err) {
+          if (err.code !== 11000) throw err;
+          // Lost a concurrent first-login race — a parallel request already made the row.
+          user = await User.findOne({
+            $or: [{ googleId: payload.sub }, { email: payload.email.toLowerCase() }],
+          });
+          if (!user) throw err;
+          if (!user.googleId) {
+            user.googleId = payload.sub;
+            await user.save();
+          }
+        }
       }
     }
 
+    // Send first-time users (and anyone who never finished the intake) to onboarding rather
+    // than a dashboard with no Brand Brief to render.
+    const needsOnboarding = created || !(await BrandBrief.exists({ userId: user._id }));
     const token = generateToken(user._id);
 
     return res.status(200).json({
       success: true,
       token,
-      isNewUser,
+      needsOnboarding,
       user: {
         _id: user._id,
         name: user.name,

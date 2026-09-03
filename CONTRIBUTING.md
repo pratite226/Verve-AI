@@ -32,6 +32,17 @@
   (`server/utils/validateEnv.js`) if a required secret is missing.
 - Never commit `.env` or any real credentials — it's gitignored; keep it that way.
 
+### Google sign-in (optional)
+
+Off unless configured — the endpoint returns `501` and the button is hidden. To enable:
+
+1. Google Cloud Console → APIs & Services → Credentials → **Create OAuth client ID → Web
+   application**. Add `http://localhost:5173` (and any deployed frontend URL) under
+   Authorized JavaScript origins. No redirect URI is needed.
+2. Put the client ID in **both** places, same value: root `.env` as `GOOGLE_CLIENT_ID`, and
+   `client/verve/.env` as `VITE_GOOGLE_CLIENT_ID` (copy `client/verve/.env.example`).
+3. Restart the API server **and** `npm run dev` (Vite only reads env files at startup).
+
 ## Before opening a PR
 
 - `cd server && npm install && npm run dev` boots without errors.
