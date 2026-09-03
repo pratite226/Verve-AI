@@ -1,6 +1,7 @@
 const BrandBrief = require("../models/BrandBrief");
 const User = require("../models/User");
 const { generateBrandBrief } = require("../services/aiService");
+const { respondServerError } = require("../utils/httpError");
 
 // Accepts either an array or a comma-separated string from the client
 const toArray = (value) => {
@@ -48,7 +49,7 @@ const generateBrand = async (req, res) => {
       brief,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -66,7 +67,7 @@ const getBrand = async (req, res) => {
 
     return res.status(200).json({ success: true, brief });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -125,7 +126,7 @@ const updateBrand = async (req, res) => {
       brief,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 

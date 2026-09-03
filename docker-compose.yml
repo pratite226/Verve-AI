@@ -6,6 +6,11 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   postgres:
     image: postgres:16-alpine
@@ -45,13 +50,14 @@ services:
     environment:
       # Overrides — inside the Docker network, services reach each other by service name,
       # not localhost.
+      NODE_ENV: production
       MONGO_URI: mongodb://mongo:27017/verve
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/verve_billing
       REDIS_URL: redis://redis:6379
       CLIENT_URL: http://localhost:5173
     depends_on:
       mongo:
-        condition: service_started
+        condition: service_healthy
       postgres:
         condition: service_healthy
       redis:

@@ -36,9 +36,13 @@ const pruneOldAnalyticsSnapshots = async () => {
 const startJobs = () => {
   // Daily at 03:00 server time — low-traffic hour, avoids contending with real requests.
   cron.schedule("0 3 * * *", () => {
-    sweepExpiredSubscriptions().catch((err) =>
-      console.error("[cron] sweepExpiredSubscriptions failed:", err.message)
-    );
+    // The subscription sweep is Postgres-only. Without DATABASE_URL there is no billing
+    // datastore, so skip it rather than throw a PrismaClientInitializationError every night.
+    if (process.env.DATABASE_URL) {
+      sweepExpiredSubscriptions().catch((err) =>
+        console.error("[cron] sweepExpiredSubscriptions failed:", err.message)
+      );
+    }
     pruneOldAnalyticsSnapshots().catch((err) =>
       console.error("[cron] pruneOldAnalyticsSnapshots failed:", err.message)
     );

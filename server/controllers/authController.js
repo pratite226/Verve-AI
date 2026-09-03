@@ -5,6 +5,7 @@ const User = require("../models/User");
 const generateToken = require("../utils/generateToken");
 const { isValidEmail, PASSWORD_RULE, PASSWORD_RULE_MESSAGE } = require("../utils/validators");
 const { sendPasswordResetEmail } = require("../services/mailerService");
+const { respondServerError } = require("../utils/httpError");
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -64,7 +65,7 @@ const signup = async (req, res) => {
       message: "User created successfully",
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -118,7 +119,7 @@ const login = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -207,7 +208,7 @@ const googleAuth = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -260,7 +261,7 @@ const forgotPassword = async (req, res) => {
       message: "If an account exists for that email, we've sent a password reset link.",
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -303,7 +304,7 @@ const resetPassword = async (req, res) => {
       message: "Password updated — you can now log in.",
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 

@@ -10,6 +10,7 @@ const { recordDraftEvent } = require("../services/analyticsService");
 const { sanitizeText } = require("../utils/validators");
 const { cacheGet, cacheSet, cacheDel } = require("../config/redis");
 const { emitToUser } = require("../services/socketService");
+const { respondServerError } = require("../utils/httpError");
 
 const CONTENT_LIST_TTL_SECONDS = 300;
 const contentListCacheKey = (userId) => `content:list:${userId}`;
@@ -74,7 +75,7 @@ const generateContent = async (req, res) => {
       draft,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -162,7 +163,7 @@ const generateMultiPlatform = async (req, res) => {
       failures: failures.length > 0 ? failures : undefined,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -180,7 +181,7 @@ const getContent = async (req, res) => {
 
     return res.status(200).json({ success: true, drafts });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -200,7 +201,7 @@ const deleteContent = async (req, res) => {
 
     return res.status(200).json({ success: true, message: "Draft deleted" });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -235,7 +236,7 @@ const scheduleContent = async (req, res) => {
       draft,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -275,7 +276,7 @@ const updateContentStatus = async (req, res) => {
       draft,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -312,7 +313,7 @@ const refineContent = async (req, res) => {
       draft,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -380,7 +381,7 @@ const generateWeeklyPlanContent = async (req, res) => {
       failures: failures.length > 0 ? failures : undefined,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -406,7 +407,7 @@ const getPlanner = async (req, res) => {
 
     return res.status(200).json({ success: true, drafts });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -432,7 +433,7 @@ const getContentIdeas = async (req, res) => {
       ideas,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
