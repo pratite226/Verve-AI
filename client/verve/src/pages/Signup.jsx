@@ -32,7 +32,7 @@ const Signup = () => {
     }
   };
 
-  const handleGoogleSuccess = (isNewUser) => navigate(isNewUser ? "/onboarding" : "/dashboard");
+  const handleGoogleSuccess = (needsOnboarding) => navigate(needsOnboarding ? "/onboarding" : "/dashboard");
 
   const checks = passwordChecks(form.password);
 

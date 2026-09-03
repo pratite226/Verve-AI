@@ -35,22 +35,36 @@ const GoogleSignInButton = ({ onSuccess, onError }) => {
   const ready = useGoogleIdentity();
   const containerRef = useRef(null);
 
+  // GIS `initialize` binds a single callback closure for the life of the widget, but the
+  // props/context it needs can change between renders — keep the current ones in a ref so
+  // the one-time callback always reads fresh values instead of a stale first-render capture.
+  const handlersRef = useRef({ loginWithGoogle, onSuccess, onError });
   useEffect(() => {
-    if (!ready || !CLIENT_ID || !containerRef.current) return undefined;
+    handlersRef.current = { loginWithGoogle, onSuccess, onError };
+  });
 
-    let cancelled = false;
+  const initializedRef = useRef(false);
 
-    window.google.accounts.id.initialize({
-      client_id: CLIENT_ID,
-      callback: async ({ credential }) => {
-        try {
-          const { isNewUser } = await loginWithGoogle(credential);
-          if (!cancelled) onSuccess?.(isNewUser);
-        } catch (err) {
-          if (!cancelled) onError?.(err.response?.data?.message || "Couldn't sign in with Google. Please try again.");
-        }
-      },
-    });
+  useEffect(() => {
+    if (!ready || !CLIENT_ID || !containerRef.current) return;
+
+    // initialize() is idempotent-ish but re-running it on every theme toggle is wasteful and
+    // can briefly double-render the button — do it once, then only re-render on theme change.
+    if (!initializedRef.current) {
+      window.google.accounts.id.initialize({
+        client_id: CLIENT_ID,
+        callback: async ({ credential }) => {
+          const { loginWithGoogle, onSuccess, onError } = handlersRef.current;
+          try {
+            const { needsOnboarding } = await loginWithGoogle(credential);
+            onSuccess?.(needsOnboarding);
+          } catch (err) {
+            onError?.(err.response?.data?.message || "Couldn't sign in with Google. Please try again.");
+          }
+        },
+      });
+      initializedRef.current = true;
+    }
 
     const width = Math.min(400, containerRef.current.offsetWidth || 400);
     window.google.accounts.id.renderButton(containerRef.current, {
@@ -62,11 +76,6 @@ const GoogleSignInButton = ({ onSuccess, onError }) => {
       logo_alignment: "left",
       width,
     });
-
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, theme]);
 
   if (!CLIENT_ID) return null;
