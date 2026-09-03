@@ -6,13 +6,20 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const path = require("path");
 const helmet = require("helmet");
+const mongoose = require("mongoose");
 
-dotenv.config({ path: path.resolve(__dirname, "../.env") });
+// Local dev reads config from the repo-root .env. In Docker/Render the file isn't present in
+// the image — env comes from the platform (compose `env_file`/`environment`, Render's
+// dashboard) — so a missing file here is expected, not an error. `quiet` suppresses dotenv
+// v17's startup promo/tip line.
+dotenv.config({ path: path.resolve(__dirname, "../.env"), quiet: true });
 
 const validateEnv = require("./utils/validateEnv");
 validateEnv();
 
 const connectDB = require("./config/db");
+const prisma = require("./config/prisma");
+const repairUserIndexes = require("./config/repairIndexes");
 const authRoutes = require("./routes/authRoutes");
 const brandRoutes = require("./routes/brandRoutes");
 const contentRoutes = require("./routes/contentRoutes");
@@ -29,9 +36,6 @@ const { initSocket } = require("./services/socketService");
 const app = express();
 const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 5000;
-
-// Connect MongoDB
-connectDB();
 
 app.use(cors());
 app.use(helmet());
@@ -121,11 +125,32 @@ if (clientBuildAvailable) {
 
 app.use(errorMiddleware);
 
-initSocket(httpServer);
+// Nothing above needs a database connection (route handlers do, but they only run after a
+// request arrives). Serve traffic only once Mongo is actually connected — connectDB() exits
+// the process on failure, so reaching the next line means the connection is live.
+const start = async () => {
+    await connectDB();
+    await repairUserIndexes();
 
-httpServer.listen(PORT, () => {
-    console.log(`Server Running Successfully`);
-    console.log(`Port : ${PORT}`);
-});
+    initSocket(httpServer);
 
-startJobs();
+    httpServer.listen(PORT, () => {
+        console.log(`Server Running Successfully`);
+        console.log(`Port : ${PORT}`);
+    });
+
+    startJobs();
+};
+
+const shutdown = async (signal) => {
+    console.log(`${signal} received — shutting down`);
+    httpServer.close();
+    await Promise.allSettled([mongoose.disconnect(), prisma.$disconnect()]);
+    process.exit(0);
+};
+
+["SIGTERM", "SIGINT"].forEach((signal) =>
+    process.on(signal, () => shutdown(signal))
+);
+
+start();

@@ -19,6 +19,11 @@ COPY . .
 COPY --from=builder /app/node_modules/@prisma /app/node_modules/@prisma
 COPY --from=builder /app/node_modules/.prisma /app/node_modules/.prisma
 
+RUN chmod +x ./docker-entrypoint.sh
+
 EXPOSE 5000
 
-CMD ["node", "server.js"]
+# Entrypoint runs `prisma migrate deploy` + plan seed before starting the API — see the
+# script. `prisma` is a runtime dependency (not devDependency) so it's present after the
+# `npm ci --omit=dev` above.
+CMD ["./docker-entrypoint.sh"]

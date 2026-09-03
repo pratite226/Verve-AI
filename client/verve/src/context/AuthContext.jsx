@@ -59,6 +59,15 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  // credential is the ID token string Google Identity Services hands back on a successful
+  // "Continue with Google" click — see components/GoogleSignInButton.jsx.
+  const loginWithGoogle = async (credential) => {
+    const { data } = await api.post("/auth/google", { credential });
+    localStorage.setItem("verve_token", data.token);
+    setUser(data.user);
+    return data;
+  };
+
   const logout = () => {
     localStorage.removeItem("verve_token");
     setUser(null);
@@ -66,7 +75,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, signup, login, logout }}>
+    <AuthContext.Provider value={{ user, setUser, loading, signup, login, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );

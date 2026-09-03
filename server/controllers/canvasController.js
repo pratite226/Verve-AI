@@ -2,6 +2,7 @@ const CanvasNote = require("../models/CanvasNote");
 const BrandBrief = require("../models/BrandBrief");
 const { generateCanvasAnalysis } = require("../services/aiService");
 const { sanitizeText } = require("../utils/validators");
+const { respondServerError } = require("../utils/httpError");
 
 // @route POST /api/canvas/notes
 // Body: { "type": "text"|"image", "content": "...", "x": 40, "y": 40 }
@@ -23,7 +24,7 @@ const createNote = async (req, res) => {
 
     return res.status(201).json({ success: true, note });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -33,7 +34,7 @@ const getNotes = async (req, res) => {
     const notes = await CanvasNote.find({ userId: req.user._id }).sort({ createdAt: 1 });
     return res.status(200).json({ success: true, notes });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -62,7 +63,7 @@ const updateNote = async (req, res) => {
 
     return res.status(200).json({ success: true, note });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -80,7 +81,7 @@ const deleteNote = async (req, res) => {
 
     return res.status(200).json({ success: true, message: "Note deleted" });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -123,7 +124,7 @@ const analyzeBoard = async (req, res) => {
 
     return res.status(200).json({ success: true, ...analysis });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 

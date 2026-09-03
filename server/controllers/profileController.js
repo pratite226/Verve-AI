@@ -1,5 +1,6 @@
 const BrandBrief = require("../models/BrandBrief");
 const { generateProfileOptimization } = require("../services/aiService");
+const { respondServerError } = require("../utils/httpError");
 
 // @route POST /api/profile/optimize
 // Body: { "currentHeadline": "...", "currentAbout": "..." }
@@ -30,7 +31,7 @@ const optimizeProfile = async (req, res) => {
       ...result,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 

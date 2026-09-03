@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const ContentDraft = require("../models/ContentDraft");
 const Analytics = require("../models/Analytics");
 const { cacheGet, cacheSet } = require("../config/redis");
+const { respondServerError } = require("../utils/httpError");
 
 const OVERVIEW_TTL_SECONDS = 300;
 const overviewCacheKey = (userId) => `analytics:overview:${userId}`;
@@ -64,7 +65,7 @@ const getOverview = async (req, res) => {
 
     return res.status(200).json(payload);
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 

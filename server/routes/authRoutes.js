@@ -1,11 +1,12 @@
 const express = require("express");
-const { signup, login, getMe, forgotPassword, resetPassword } = require("../controllers/authController");
+const { signup, login, googleAuth, getMe, forgotPassword, resetPassword } = require("../controllers/authController");
 const { protect } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
 router.post("/signup", signup);
 router.post("/login", login);
+router.post("/google", googleAuth);
 router.get("/me", protect, getMe);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);

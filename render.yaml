@@ -13,9 +13,15 @@ services:
     plan: free
     rootDir: server
     buildCommand: npm install && npx prisma generate
+    # Runs after build, before the new version takes traffic, with env vars available —
+    # applies committed Postgres migrations and seeds the billing plans. No-ops when the
+    # schema is already current. Requires DATABASE_URL to be set on the service.
+    preDeployCommand: npx prisma migrate deploy && node prisma/seed.js
     startCommand: node server.js
     healthCheckPath: /api/health
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: MONGO_URI
         sync: false
       - key: JWT_SECRET

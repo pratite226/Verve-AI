@@ -1,6 +1,7 @@
 const prisma = require("../config/prisma");
 const { createCheckoutSession, verifyWebhookEvent } = require("../services/stripeService");
 const { emitToUser } = require("../services/socketService");
+const { respondServerError } = require("../utils/httpError");
 
 // @route GET /api/billing/plans
 const getPlans = async (req, res) => {
@@ -8,7 +9,7 @@ const getPlans = async (req, res) => {
     const plans = await prisma.plan.findMany({ orderBy: { priceCents: "asc" } });
     return res.status(200).json({ success: true, plans });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -44,7 +45,7 @@ const getInvoices = async (req, res) => {
 
     return res.status(200).json({ success: true, invoices });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -76,7 +77,7 @@ const getSummary = async (req, res) => {
 
     return res.status(200).json({ success: true, byStatus, byMonth });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -141,7 +142,7 @@ const createCheckout = async (req, res) => {
 
     return res.status(200).json({ success: true, url: session.url });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -175,7 +176,7 @@ const handleWebhook = async (req, res) => {
     return res.status(200).json({ received: true });
   } catch (error) {
     console.error("Webhook handling failed:", error.message);
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 

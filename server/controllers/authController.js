@@ -1,11 +1,18 @@
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
+const { OAuth2Client } = require("google-auth-library");
 const User = require("../models/User");
 const generateToken = require("../utils/generateToken");
 const { isValidEmail, PASSWORD_RULE, PASSWORD_RULE_MESSAGE } = require("../utils/validators");
 const { sendPasswordResetEmail } = require("../services/mailerService");
+const { respondServerError } = require("../utils/httpError");
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+// Only constructed when GOOGLE_CLIENT_ID is actually set — Google sign-in is an optional
+// feature (like SMTP/Stripe/Redis elsewhere in this app), not one of the hard requirements
+// validateEnv.js fails boot on, so googleAuth below checks this for null instead.
+const googleClient = process.env.GOOGLE_CLIENT_ID ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID) : null;
 
 // @route POST /signup
 const signup = async (req, res) => {
@@ -58,7 +65,7 @@ const signup = async (req, res) => {
       message: "User created successfully",
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -79,6 +86,13 @@ const login = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: "Invalid email or password",
+      });
+    }
+
+    if (!user.password) {
+      return res.status(401).json({
+        success: false,
+        message: 'This account signs in with Google — use "Continue with Google" instead.',
       });
     }
 
@@ -105,7 +119,96 @@ const login = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
+  }
+};
+
+// @route POST /google
+// Body: { credential } — the ID token string from Google Identity Services' Sign-In button.
+// Handles both first-time and returning Google users transparently: finds an existing
+// Google-linked account, links Google to a matching email/password account, or creates a
+// brand new account — whichever applies. Frontend uses `isNewUser` to decide whether to route
+// to onboarding (never done the intake) or straight to the dashboard.
+const googleAuth = async (req, res) => {
+  try {
+    if (!googleClient) {
+      return res.status(501).json({
+        success: false,
+        message: "Google sign-in isn't configured on this server.",
+      });
+    }
+
+    const { credential } = req.body;
+    if (!credential || typeof credential !== "string") {
+      return res.status(400).json({ success: false, message: "Missing Google credential" });
+    }
+
+    let payload;
+    try {
+      const ticket = await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      payload = ticket.getPayload();
+    } catch {
+      return res.status(401).json({
+        success: false,
+        message: "That Google sign-in couldn't be verified. Please try again.",
+      });
+    }
+
+    if (!payload?.email) {
+      return res.status(401).json({
+        success: false,
+        message: "Google didn't provide an email for this account.",
+      });
+    }
+
+    let user = await User.findOne({ googleId: payload.sub });
+    let isNewUser = false;
+
+    if (!user) {
+      // Not linked yet — an email/password account may already own this email. Only trust
+      // it for linking when Google itself reports the email as verified, so an attacker
+      // can't claim someone else's account via an unverified email on their Google side.
+      user = await User.findOne({ email: payload.email.toLowerCase() });
+
+      if (user) {
+        if (!payload.email_verified) {
+          return res.status(401).json({
+            success: false,
+            message: "That Google account's email isn't verified — please log in with your password instead.",
+          });
+        }
+        user.googleId = payload.sub;
+        await user.save();
+      } else {
+        user = await User.create({
+          name: payload.name || payload.email.split("@")[0],
+          email: payload.email,
+          googleId: payload.sub,
+        });
+        isNewUser = true;
+      }
+    }
+
+    const token = generateToken(user._id);
+
+    return res.status(200).json({
+      success: true,
+      token,
+      isNewUser,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        industry: user.industry,
+        careerStage: user.careerStage,
+        goals: user.goals,
+      },
+    });
+  } catch (error) {
+    return respondServerError(res, error);
   }
 };
 
@@ -158,7 +261,7 @@ const forgotPassword = async (req, res) => {
       message: "If an account exists for that email, we've sent a password reset link.",
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
@@ -201,8 +304,8 @@ const resetPassword = async (req, res) => {
       message: "Password updated — you can now log in.",
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return respondServerError(res, error);
   }
 };
 
-module.exports = { signup, login, getMe, forgotPassword, resetPassword };
+module.exports = { signup, login, googleAuth, getMe, forgotPassword, resetPassword };
