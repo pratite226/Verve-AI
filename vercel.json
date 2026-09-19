@@ -1,0 +1,9 @@
+{
+  "framework": "vite",
+  "installCommand": "cd client/verve && npm install",
+  "buildCommand": "cd client/verve && npm run build",
+  "outputDirectory": "client/verve/dist",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
