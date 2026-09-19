@@ -1,0 +1,1476 @@
+# MASTER PROMPT — Generate Complete Project Documentation
+
+You are an expert software architect, technical writer, codebase analyst, and documentation engineer.
+
+I have a newly developed software project/codebase. Your task is to thoroughly inspect the entire project and create **complete, professional, implementation-accurate documentation** for it.
+
+The documentation must be written based on the **actual code, configuration, dependencies, database schemas, APIs, frontend components, backend services, workflows, and project structure** that exist in the repository.
+
+## CRITICAL RULE
+
+**DO NOT INVENT ANYTHING.**
+
+Do not assume that a feature, API, database table, algorithm, model, authentication mechanism, workflow, environment variable, or technology exists unless you can verify it from the codebase.
+
+If something cannot be determined from the repository:
+
+- Explicitly say that it could not be verified.
+- Do not fabricate implementation details.
+- Clearly distinguish between implemented functionality and planned/future functionality.
+- If documentation conflicts with the code, treat the **code as the source of truth** and mention the discrepancy.
+
+---
+
+# 1. FIRST: FULL CODEBASE ANALYSIS
+
+Before writing any documentation, inspect the repository comprehensively.
+
+Analyze:
+
+- Root directory
+- All source-code directories
+- Backend
+- Frontend
+- APIs
+- Database layer
+- Models
+- Schemas
+- Services
+- Controllers
+- Routes
+- Middleware
+- Authentication/authorization
+- Configuration
+- Environment variables
+- Utility functions
+- AI/ML components
+- Computer-vision components
+- Data-processing pipelines
+- File-processing systems
+- Background jobs
+- External integrations
+- Docker configuration
+- Deployment configuration
+- Scripts
+- Tests
+- Documentation already present
+- Package/dependency files
+- Build configuration
+- CI/CD configuration
+- Static assets where relevant
+
+Inspect important files individually rather than relying only on filenames.
+
+Pay special attention to:
+
+- package.json
+- requirements.txt
+- pyproject.toml
+- Dockerfile
+- docker-compose files
+- .env.example
+- configuration files
+- database migrations
+- schema files
+- API route definitions
+- controllers
+- service classes
+- frontend pages
+- frontend components
+- state management
+- API clients
+- authentication code
+- core algorithms
+- processing pipelines
+- README files
+- test files
+
+---
+
+# 2. IDENTIFY THE ACTUAL ARCHITECTURE
+
+Determine the actual architecture implemented by the project.
+
+Document:
+
+- Overall architecture
+- Frontend architecture
+- Backend architecture
+- Database architecture
+- API architecture
+- Data flow
+- Authentication flow
+- File/data processing flow
+- External service integrations
+- AI/ML pipeline, if present
+- Background processing, if present
+- Deployment architecture
+
+Create an architecture diagram using Mermaid wherever possible.
+
+Example:
+
+```mermaid
+flowchart LR
+    User --> Frontend
+    Frontend --> Backend
+    Backend --> Database
+    Backend --> ExternalService
+```
+
+However, replace this with the **actual architecture discovered in the codebase**.
+
+Do not use generic architecture diagrams.
+
+---
+
+# 3. PROJECT OVERVIEW
+
+Create a clear project overview explaining:
+
+- Project name
+- Purpose
+- Problem being solved
+- Target users
+- Core functionality
+- Major features
+- Technology stack
+- High-level workflow
+- Current implementation status
+
+Explain the project in:
+
+### A. One sentence
+
+A concise description suitable for a README.
+
+### B. One paragraph
+
+Explain what the system does and why it exists.
+
+### C. Technical explanation
+
+Explain how the system actually works internally.
+
+---
+
+# 4. PROBLEM STATEMENT
+
+Document the problem the project is designed to solve.
+
+Explain:
+
+- Existing problem
+- Why the problem matters
+- Limitations of existing approaches
+- How this project addresses those limitations
+- What makes the implementation useful
+
+Only include claims that are supported by the project or explicitly provided project information.
+
+Do not invent business claims or performance numbers.
+
+---
+
+# 5. FEATURES
+
+Create a detailed feature list.
+
+For every feature, document:
+
+- Feature name
+- Purpose
+- User interaction
+- Relevant frontend implementation
+- Relevant backend implementation
+- APIs involved
+- Database interaction
+- External services involved
+- Important files/functions/classes
+- Current implementation status
+
+Clearly separate:
+
+### Implemented
+
+Features that are actually present and functional in the code.
+
+### Partially implemented
+
+Features where code exists but functionality is incomplete.
+
+### Planned/Future
+
+Features that are mentioned but not implemented.
+
+---
+
+# 6. TECHNOLOGY STACK
+
+Create a detailed technology-stack table.
+
+Include:
+
+| Layer | Technology | Purpose | Evidence/Location |
+|---|---|---|---|
+| Frontend | ... | ... | ... |
+| Backend | ... | ... | ... |
+| Database | ... | ... | ... |
+| AI/ML | ... | ... | ... |
+| Computer Vision | ... | ... | ... |
+| Storage | ... | ... | ... |
+| Infrastructure | ... | ... | ... |
+| Deployment | ... | ... | ... |
+
+For every technology, verify it from dependency files or actual source code.
+
+Do not list technologies simply because they are common choices.
+
+---
+
+# 7. PROJECT DIRECTORY STRUCTURE
+
+Generate a complete but readable project-tree representation.
+
+Example:
+
+```text
+project/
+├── frontend/
+│   ├── ...
+├── backend/
+│   ├── ...
+├── database/
+│   └── ...
+├── docker/
+├── tests/
+└── README.md
+```
+
+Then explain the purpose of every important directory and file.
+
+Do not blindly document every generated/build/cache file.
+
+Focus on files relevant to understanding, developing, testing, and deploying the application.
+
+---
+
+# 8. SYSTEM ARCHITECTURE
+
+Create a detailed architecture section.
+
+Explain:
+
+### Frontend
+
+- Framework
+- Routing
+- Components
+- State management
+- API communication
+- UI structure
+- Form handling
+- File uploads
+- Error handling
+
+### Backend
+
+- Framework
+- Entry point
+- Routes
+- Controllers
+- Services
+- Middleware
+- Utilities
+- Error handling
+- Configuration
+
+### Database
+
+- Database technology
+- Tables/collections
+- Relationships
+- Primary keys
+- Foreign keys
+- Indexes
+- Important constraints
+- CRUD operations
+
+### External Services
+
+For every external service:
+
+- Service name
+- Purpose
+- Where it is called
+- Data sent
+- Data received
+- Authentication method
+- Failure handling
+
+---
+
+# 9. DATA FLOW
+
+Document the complete lifecycle of important data.
+
+For example:
+
+```text
+User Input
+    ↓
+Frontend
+    ↓
+API Request
+    ↓
+Backend Route
+    ↓
+Controller
+    ↓
+Service
+    ↓
+Database / Processing Engine
+    ↓
+Result
+    ↓
+API Response
+    ↓
+Frontend
+    ↓
+User
+```
+
+Replace the above with actual project flow.
+
+For important workflows, create separate Mermaid diagrams.
+
+---
+
+# 10. API DOCUMENTATION
+
+Create complete API documentation based on the actual routes in the code.
+
+For every endpoint document:
+
+- HTTP method
+- Endpoint
+- Purpose
+- Authentication requirement
+- Request headers
+- Path parameters
+- Query parameters
+- Request body
+- Required fields
+- Optional fields
+- Validation rules
+- Response format
+- HTTP status codes
+- Error responses
+- Relevant source files
+- Example request
+- Example response
+
+Use this format:
+
+```text
+METHOD /api/example
+```
+
+Then:
+
+### Purpose
+
+...
+
+### Authentication
+
+...
+
+### Request
+
+```json
+{
+  "example": "value"
+}
+```
+
+### Success Response
+
+```json
+{
+  "success": true
+}
+```
+
+### Error Responses
+
+...
+
+Only document endpoints that actually exist.
+
+---
+
+# 11. DATABASE DOCUMENTATION
+
+If a database exists, document it comprehensively.
+
+For each table/model/collection:
+
+- Name
+- Purpose
+- Fields
+- Data types
+- Required/optional
+- Default values
+- Primary key
+- Foreign keys
+- Relationships
+- Indexes
+- Validation
+- Important queries
+
+Create an ER diagram using Mermaid.
+
+Example:
+
+```mermaid
+erDiagram
+    USER ||--o{ PROJECT : owns
+    PROJECT ||--o{ FILE : contains
+```
+
+Again, use only actual relationships found in the project.
+
+---
+
+# 12. CORE BUSINESS LOGIC
+
+Identify the most important functions/classes/modules.
+
+For each:
+
+- File path
+- Function/class name
+- Responsibility
+- Inputs
+- Outputs
+- Internal logic
+- Dependencies
+- Error handling
+- How it interacts with other components
+
+Explain complex logic step-by-step.
+
+Do not merely copy code.
+
+---
+
+# 13. AI / ML / COMPUTER VISION
+
+If the project contains AI, ML, computer vision, image processing, video processing, geospatial processing, or reconstruction functionality, create a dedicated technical section.
+
+Document:
+
+- Models used
+- Libraries used
+- Model inputs
+- Model outputs
+- Preprocessing
+- Processing pipeline
+- Postprocessing
+- Inference flow
+- Configuration
+- Model files
+- External AI APIs
+- Prompting logic, if applicable
+- Computer-vision algorithms
+- Coordinate systems
+- Geospatial processing
+- Point clouds
+- Mesh generation
+- Photogrammetry
+- Image matching
+- Feature extraction
+- Camera parameters
+- Telemetry
+- GPS
+- Sensor data
+
+Only include concepts actually used by the implementation.
+
+If the project uses an external processing engine, explain:
+
+```text
+Input
+  ↓
+Validation
+  ↓
+Preprocessing
+  ↓
+External/AI Processing
+  ↓
+Postprocessing
+  ↓
+Output Storage
+  ↓
+Frontend Visualization
+```
+
+Adapt this to the actual implementation.
+
+---
+
+# 14. FILE UPLOAD / PROCESSING PIPELINE
+
+If the project handles files such as:
+
+- Images
+- Videos
+- CSV
+- JSON
+- telemetry
+- sensor logs
+- PDFs
+- documents
+- 3D models
+- point clouds
+
+document:
+
+1. Accepted formats
+2. Upload mechanism
+3. Validation
+4. Storage location
+5. Processing
+6. Conversion
+7. Metadata extraction
+8. Database storage
+9. Result generation
+10. Result retrieval
+11. Error handling
+12. Cleanup
+
+Create a flow diagram.
+
+---
+
+# 15. FRONTEND DOCUMENTATION
+
+Document the frontend in detail.
+
+Include:
+
+- Pages
+- Routes
+- Components
+- Layouts
+- Forms
+- Modals
+- Tables
+- Dashboards
+- Navigation
+- State management
+- API calls
+- Loading states
+- Error states
+- Empty states
+- Responsive behavior
+- Authentication UI
+- File upload UI
+- Visualization components
+
+For important components explain:
+
+```text
+Component
+├── Purpose
+├── Props
+├── State
+├── API calls
+├── User interactions
+└── Dependencies
+```
+
+---
+
+# 16. BACKEND DOCUMENTATION
+
+Document the backend structure.
+
+Explain:
+
+- Application entry point
+- Server initialization
+- Routes
+- Controllers
+- Services
+- Models
+- Middleware
+- Utilities
+- Configuration
+- Error handling
+- Logging
+- Authentication
+- Authorization
+- CORS
+- Validation
+- File processing
+- Background tasks
+
+Explain the request lifecycle from incoming HTTP request to final response.
+
+---
+
+# 17. AUTHENTICATION AND SECURITY
+
+If authentication/security exists, document the actual implementation.
+
+Include:
+
+- Authentication mechanism
+- Login flow
+- Registration flow
+- Tokens/sessions
+- Token storage
+- Password handling
+- Authorization
+- Roles
+- Protected routes
+- Middleware
+- CORS
+- Input validation
+- File validation
+- Secrets management
+
+Do not claim security properties that are not actually implemented.
+
+Also identify obvious security concerns or areas that should be improved.
+
+---
+
+# 18. CONFIGURATION AND ENVIRONMENT VARIABLES
+
+Document every environment variable that is actually referenced.
+
+Use:
+
+| Variable | Purpose | Required | Example |
+|---|---|---|---|
+| ... | ... | Yes/No | ... |
+
+Do not expose real secrets.
+
+Use placeholders such as:
+
+```env
+API_KEY=your_api_key_here
+DATABASE_URL=your_database_url_here
+```
+
+Explain where each variable is consumed.
+
+---
+
+# 19. LOCAL DEVELOPMENT SETUP
+
+Create a complete setup guide for a new developer.
+
+The guide should include:
+
+### Prerequisites
+
+- Required runtime
+- Required package manager
+- Required database
+- Required system dependencies
+- Required external tools
+
+### Installation
+
+Exact commands based on the repository.
+
+### Environment setup
+
+Explain how to create the environment file.
+
+### Dependency installation
+
+Provide actual commands.
+
+### Database setup
+
+If applicable:
+
+- Database creation
+- Migrations
+- Seed data
+- Required services
+
+### Running the project
+
+Provide commands for:
+
+- Frontend
+- Backend
+- Workers/background services
+- Supporting services
+
+### Verification
+
+Explain how a developer can confirm the installation works.
+
+---
+
+# 20. DOCKER / CONTAINERIZATION
+
+If Docker is present, document:
+
+- Dockerfiles
+- Images
+- Containers
+- Ports
+- Volumes
+- Environment variables
+- Networks
+- Services
+- docker-compose configuration
+- Startup commands
+- Dependencies
+
+Explain how to run the complete system using Docker.
+
+---
+
+# 21. TESTING
+
+Inspect the actual test suite.
+
+Document:
+
+- Testing framework
+- Test structure
+- Unit tests
+- Integration tests
+- API tests
+- Frontend tests
+- End-to-end tests
+- Fixtures
+- Test database
+- Mocking
+- How to run tests
+
+Provide actual commands.
+
+Also identify important areas that currently lack tests.
+
+Do not claim test coverage percentages unless they can be verified.
+
+---
+
+# 22. ERROR HANDLING
+
+Document how the application handles failures.
+
+Cover:
+
+- Validation errors
+- API errors
+- Database errors
+- Authentication errors
+- File-processing errors
+- External API failures
+- AI/ML failures
+- Timeouts
+- Invalid input
+- Missing configuration
+- Unexpected exceptions
+
+Explain:
+
+```text
+Error Source
+    ↓
+Detection
+    ↓
+Handling
+    ↓
+Logging
+    ↓
+API Response / UI Message
+```
+
+based on the actual implementation.
+
+---
+
+# 23. LOGGING AND MONITORING
+
+Document:
+
+- Logging framework
+- Log levels
+- Important log messages
+- Error logging
+- Request logging
+- Debugging approach
+- Monitoring
+- Health endpoints
+- Metrics
+
+Only include what actually exists.
+
+---
+
+# 24. DEPLOYMENT DOCUMENTATION
+
+Determine the actual deployment approach from the repository.
+
+Document:
+
+- Build process
+- Production configuration
+- Environment variables
+- Docker
+- Hosting requirements
+- Database requirements
+- Storage requirements
+- Ports
+- Reverse proxy
+- HTTPS
+- CI/CD
+- Deployment commands
+
+If deployment is not implemented, explicitly state that.
+
+---
+
+# 25. PERFORMANCE
+
+Analyze the implementation for performance considerations.
+
+Document:
+
+- Expensive operations
+- Large-file processing
+- Database queries
+- Caching
+- Async operations
+- Parallel processing
+- Memory-heavy operations
+- CPU/GPU requirements
+- Network-heavy operations
+
+Do not invent benchmarks.
+
+If performance has not been measured, state:
+
+> Performance benchmarks are not currently available in the repository.
+
+Then identify potential bottlenecks based on code inspection.
+
+---
+
+# 26. LIMITATIONS
+
+Create a realistic limitations section.
+
+Include limitations that are actually visible from the implementation.
+
+Examples:
+
+- Unsupported file formats
+- Missing validation
+- Missing tests
+- Dependency on external services
+- Processing time
+- Hardware requirements
+- Scalability limitations
+- Missing authentication
+- Missing monitoring
+- Known edge cases
+
+Do not manufacture limitations.
+
+---
+
+# 27. FUTURE IMPROVEMENTS
+
+Based on the current architecture, identify reasonable future improvements.
+
+Separate them from currently implemented features.
+
+Possible categories:
+
+- Performance
+- Security
+- Scalability
+- UX
+- Testing
+- Monitoring
+- AI/ML improvements
+- Infrastructure
+- Code quality
+
+Clearly label these as **recommendations**, not existing functionality.
+
+---
+
+# 28. TROUBLESHOOTING GUIDE
+
+Create a troubleshooting section for common developer problems.
+
+For each issue:
+
+### Problem
+
+...
+
+### Likely cause
+
+...
+
+### Solution
+
+...
+
+### Verification
+
+...
+
+Only include problems relevant to the actual stack.
+
+---
+
+# 29. FAQ
+
+Create a technical FAQ covering questions a new developer might ask.
+
+Examples:
+
+- What does the project do?
+- How does the architecture work?
+- Where does the application start?
+- Where are the API routes?
+- Where is the database configuration?
+- How is authentication handled?
+- How do I run the project?
+- How do I run tests?
+- Where are environment variables defined?
+- Where does uploaded data go?
+- Where is the core processing logic?
+- How do I debug the backend?
+- How do I add a new API endpoint?
+- How do I add a new frontend page?
+- How do I modify the database?
+
+Make answers specific to this repository.
+
+---
+
+# 30. DEVELOPER ONBOARDING GUIDE
+
+Create a section specifically for a developer joining the project for the first time.
+
+Include:
+
+### First 10 minutes
+
+What they should understand first.
+
+### First hour
+
+What files/modules they should inspect.
+
+### First day
+
+What workflows they should run.
+
+### Important files
+
+List the most important files with explanations.
+
+### Common workflows
+
+Explain how to:
+
+- Add a feature
+- Add an API endpoint
+- Modify a database model
+- Add a frontend page
+- Modify processing logic
+- Add configuration
+- Run tests
+- Debug issues
+
+---
+
+# 31. CONTRIBUTION GUIDE
+
+Create developer contribution guidelines based on the actual repository.
+
+Include:
+
+- Branching recommendations
+- Code organization
+- Naming conventions
+- Testing expectations
+- Commit recommendations
+- Pull request expectations
+- Environment setup
+- Documentation expectations
+
+Clearly mark recommendations as recommendations if they are not already established by the project.
+
+---
+
+# 32. GIT / VERSION CONTROL
+
+Inspect the repository where possible and document:
+
+- Important branches if available
+- Existing conventions
+- Important ignored files
+- Files that should never be committed
+- Environment/secrets handling
+
+Never expose secrets.
+
+---
+
+# 33. CODE QUALITY REVIEW
+
+Perform a lightweight architectural/code-quality review.
+
+Identify:
+
+### Strengths
+
+- Good architectural decisions
+- Clean abstractions
+- Reusable components
+- Good validation
+- Good separation of concerns
+
+### Risks
+
+- Tight coupling
+- Duplicate logic
+- Missing validation
+- Error handling gaps
+- Security risks
+- Scalability concerns
+- Maintainability issues
+
+For every finding provide:
+
+- Location
+- Problem
+- Why it matters
+- Suggested improvement
+
+Do not rewrite the code unless explicitly requested.
+
+---
+
+# 34. IMPLEMENTATION STATUS
+
+Create a clear status table:
+
+| Area | Status | Notes |
+|---|---|---|
+| Frontend | Implemented/Partial/Missing | ... |
+| Backend | ... | ... |
+| Database | ... | ... |
+| Authentication | ... | ... |
+| AI/ML | ... | ... |
+| Testing | ... | ... |
+| Deployment | ... | ... |
+| Documentation | ... | ... |
+
+Base this entirely on repository evidence.
+
+---
+
+# 35. IMPORTANT SOURCE FILE REFERENCE
+
+Throughout the documentation, reference important implementation locations.
+
+For example:
+
+```text
+backend/routes/project.py
+backend/services/reconstruction.py
+frontend/src/pages/Dashboard.jsx
+```
+
+When discussing a feature, tell the reader where they can find its implementation.
+
+Use exact paths and exact function/class names whenever possible.
+
+---
+
+# 36. COMPLETE USER WORKFLOW
+
+Describe the application from the user's perspective.
+
+Example structure:
+
+```text
+1. User opens application
+2. User performs authentication
+3. User creates/selects project
+4. User uploads data
+5. System validates input
+6. Processing starts
+7. Backend processes data
+8. Results are generated
+9. Results are stored
+10. User views results
+```
+
+Replace this with the actual workflow.
+
+Document each step technically as well.
+
+---
+
+# 37. COMPLETE DEVELOPER WORKFLOW
+
+Describe what happens internally for the major workflow.
+
+For example:
+
+```text
+Frontend Event
+      ↓
+API Request
+      ↓
+Route
+      ↓
+Controller
+      ↓
+Service
+      ↓
+Processing
+      ↓
+Database
+      ↓
+Response
+      ↓
+Frontend State Update
+      ↓
+UI
+```
+
+Again, use the actual implementation.
+
+---
+
+# 38. GLOSSARY
+
+Create a glossary of project-specific technical terms and abbreviations.
+
+For example:
+
+| Term | Meaning |
+|---|---|
+| API | ... |
+| ... | ... |
+
+Only include terms relevant to this project.
+
+---
+
+# 39. DOCUMENTATION STRUCTURE
+
+Generate the final documentation as a professional document with this structure:
+
+# Project Name
+
+## 1. Executive Summary
+
+## 2. Problem Statement
+
+## 3. Project Objectives
+
+## 4. System Overview
+
+## 5. Features
+
+## 6. Technology Stack
+
+## 7. Architecture
+
+## 8. Project Structure
+
+## 9. Application Workflow
+
+## 10. Frontend Architecture
+
+## 11. Backend Architecture
+
+## 12. Database Architecture
+
+## 13. API Documentation
+
+## 14. Core Processing Logic
+
+## 15. AI/ML / Computer Vision Pipeline
+
+## 16. File/Data Processing
+
+## 17. Authentication & Security
+
+## 18. Configuration
+
+## 19. Local Development Setup
+
+## 20. Docker & Infrastructure
+
+## 21. Testing
+
+## 22. Error Handling
+
+## 23. Logging & Monitoring
+
+## 24. Deployment
+
+## 25. Performance Considerations
+
+## 26. Limitations
+
+## 27. Future Improvements
+
+## 28. Troubleshooting
+
+## 29. FAQ
+
+## 30. Developer Onboarding
+
+## 31. Contribution Guide
+
+## 32. Code Quality Review
+
+## 33. Implementation Status
+
+## 34. Glossary
+
+---
+
+# 40. DOCUMENTATION QUALITY REQUIREMENTS
+
+The final documentation must be:
+
+- Technically accurate
+- Based on actual source code
+- Beginner-friendly
+- Useful for experienced developers
+- Structured
+- Searchable
+- Professional
+- Easy to maintain
+- Explicit about assumptions
+- Free from fabricated implementation details
+
+Avoid vague statements such as:
+
+> "The backend handles the data."
+
+Instead write:
+
+> "`POST /api/...` receives the uploaded file, passes it to `XService.process()`, stores the resulting metadata in `YModel`, and returns the generated identifier."
+
+Only write this level of detail when verified from the code.
+
+---
+
+# 41. DIAGRAM REQUIREMENTS
+
+Use Mermaid diagrams wherever they improve understanding.
+
+Create diagrams for:
+
+1. System architecture
+2. Request/response flow
+3. Main application workflow
+4. Database ER diagram
+5. Authentication flow, if applicable
+6. File-processing pipeline
+7. AI/ML pipeline, if applicable
+8. Deployment architecture, if applicable
+
+All diagrams must represent the actual implementation.
+
+---
+
+# 42. CODE EXAMPLES
+
+Include small code examples where useful.
+
+Examples may include:
+
+- API requests
+- Environment configuration
+- Database queries
+- CLI commands
+- Important function usage
+
+Do not dump large sections of source code.
+
+Prefer short, explanatory examples.
+
+---
+
+# 43. DOCUMENTATION FILES
+
+Create the documentation in a clean documentation structure.
+
+Prefer:
+
+```text
+docs/
+├── README.md
+├── architecture.md
+├── setup.md
+├── api.md
+├── database.md
+├── frontend.md
+├── backend.md
+├── processing-pipeline.md
+├── deployment.md
+├── testing.md
+├── troubleshooting.md
+├── contributing.md
+└── glossary.md
+```
+
+If the project is small, a single comprehensive `DOCUMENTATION.md` is acceptable.
+
+Choose the structure that best fits the actual size and complexity of the repository.
+
+Also improve the main `README.md` if necessary so that a new developer can quickly understand and run the project.
+
+---
+
+# 44. README REQUIREMENTS
+
+The README should provide a concise entry point containing:
+
+- Project name
+- Short description
+- Key features
+- Architecture overview
+- Tech stack
+- Screenshots/placeholders if already available
+- Installation
+- Environment variables
+- Running locally
+- Docker setup
+- Testing
+- Project structure
+- API documentation link
+- Documentation link
+- Known limitations
+- Contribution instructions
+
+Do not make the README excessively long if detailed information is already available in `/docs`.
+
+---
+
+# 45. FINAL VERIFICATION
+
+Before finishing, perform a documentation consistency check.
+
+Verify:
+
+- Every documented API exists.
+- Every referenced file exists.
+- Every referenced function/class exists.
+- Technologies match dependencies.
+- Environment variables match actual usage.
+- Database documentation matches actual schemas.
+- Architecture diagrams match actual architecture.
+- Setup commands are valid for the repository.
+- Docker instructions match Docker configuration.
+- Test commands match actual test configuration.
+- No secret values are exposed.
+- No fictional features are presented as implemented.
+
+---
+
+# 46. SOURCE-OF-TRUTH POLICY
+
+Use the following priority when determining facts:
+
+1. Actual source code
+2. Configuration files
+3. Database schemas/migrations
+4. Dependency files
+5. Tests
+6. Existing project documentation
+7. Comments
+8. README claims
+
+If documentation contradicts implementation, explicitly flag it.
+
+Example:
+
+> **Documentation discrepancy:** The README states X, but the current implementation in `path/to/file` implements Y.
+
+---
+
+# 47. FINAL OUTPUT
+
+After analyzing the entire project:
+
+1. Generate the complete documentation.
+2. Create/update the appropriate documentation files.
+3. Create/update the README.
+4. Add Mermaid architecture diagrams.
+5. Include exact implementation references.
+6. Make the documentation suitable for a completely new developer.
+7. Ensure every technical claim is traceable to the repository.
+8. Clearly distinguish implemented functionality from recommendations.
+9. Do not fabricate missing information.
+
+At the end, provide a short **Documentation Audit Summary** containing:
+
+### Repository analyzed
+
+- Main technologies
+- Major modules
+- Number/type of documentation files created
+
+### Verified
+
+- Architecture
+- APIs
+- Database
+- Configuration
+- Processing pipeline
+- Setup
+- Testing
+
+### Not verified / missing
+
+List anything that could not be determined from the repository.
+
+### Recommended next steps
+
+List the 5–10 most valuable documentation or engineering improvements.
+
+---
+
+## MOST IMPORTANT INSTRUCTION
+
+Treat this task as **reverse-engineering the existing project into professional technical documentation**, not as writing generic documentation for what the project might be.
+
+**The repository is the source of truth.**
+
+Inspect first.
+
+Understand second.
+
+Document third.
+
+Never invent.
